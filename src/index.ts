@@ -1,13 +1,15 @@
 /**
- * Open Review -- boot entry point (D-01, D-12, D-18).
+ * Open Review -- boot entry point (D-01, D-08, D-12, D-18).
  *
  * Boot sequence:
  *   1. Load EnvConfigStore (fails fast if WEBHOOK_SECRET missing).
  *   2. openDb: WAL, schema, prepared statements.
- *   3. Startup prune of old deliveries and orphaned worktrees.
- *   4. Crash recovery: reclaimRunning flips any 'running' rows back to 'pending'.
- *   5. Create queue, wire the review runner, start the drain loop.
- *   6. Build the Fastify server, start listening.
+ *   3. assertSqliteVersion: refuse to start if SQLite < 3.35 (Pitfall 8).
+ *   4. assertClaudeVersion: refuse to start if Claude CLI < 2.1.163 (CVE-2026-55607).
+ *   5. Startup maintenance: prune old deliveries, orphaned worktrees.
+ *   6. Crash recovery: reclaimRunning flips any 'running' rows back to 'pending'.
+ *   7. Create queue, wire the review runner, start the drain loop.
+ *   8. Build the Fastify server, start listening.
  *
  * Local full-stack run (manual end-to-end smoke):
  *
@@ -27,6 +29,7 @@ import { createQueue } from './queue/queue.js';
 import { buildServer } from './server.js';
 import { runReview } from './worker/pipeline.js';
 import { pruneOrphanedWorktrees } from './worker/repo.js';
+import { assertSqliteVersion, assertClaudeVersion } from './startup.js';
 import { log } from './logger.js';
 import type { JobPayload } from './queue/types.js';
 import type { ClaimedJob } from './queue/queue.js';
@@ -38,21 +41,26 @@ async function main(): Promise<void> {
   // Step 2: Open database.
   const db = openDb(config.dbPath);
 
-  // Step 3: Startup maintenance.
+  // Step 3: Safety gates -- refuse to start if versions are below the minimum.
+  // Both checks run BEFORE listen() so no webhook is ever accepted on an unsafe env.
+  assertSqliteVersion(db);
+  await assertClaudeVersion();
+
+  // Step 4: Startup maintenance.
   pruneOldDeliveries();
   await pruneOrphanedWorktrees();
 
-  // Step 4: Create queue + crash recovery.
+  // Step 5: Create queue + crash recovery.
   const queue = createQueue(db);
   queue.reclaimRunning();
 
-  // Step 5: Wire the review runner.
+  // Step 6: Wire the review runner.
   queue.setRunner(async (job: ClaimedJob) => {
     const payload = JSON.parse(job.payload) as JobPayload;
     await runReview(payload, config);
   });
 
-  // Step 6: Build and start the server.
+  // Step 7: Build and start the server.
   const server = buildServer({
     webhookSecret: config.webhookSecret,
     repos: config.repos,
