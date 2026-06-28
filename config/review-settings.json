@@ -1,0 +1,16 @@
+{
+  "$comment": "Read-only enforcement settings for the claude -p REVIEW subprocess ONLY. Applied by the pipeline via --settings <absolute-path-to-this-file> (see src/provider/claude.ts buildClaudeArgs). Deliberately NOT placed at .claude/settings.json so it is never auto-loaded into interactive sessions. The catch-all '*' matcher routes EVERY tool (including unforeseen ones) to the default-deny hook (Layer 2 of the two-layer safety model, D-09).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/enforce-readonly.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
