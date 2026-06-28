@@ -1,8 +1,8 @@
 /**
- * Persistent SQLite job queue (D-12, QUEU-01..04).
+ * Persistent SQLite job queue (D-12, QUEU-01..05).
  *
  * Uses better-sqlite3 (synchronous) for atomic operations.
- * Single-worker poll loop: at most one job runs at a time (concurrency cap = 1).
+ * Single-worker poll loop: at most one job runs at a time (concurrency cap = 1, QUEU-04).
  *
  * Design:
  *   enqueue(prId, payload)
@@ -15,12 +15,16 @@
  *       records started_at; returns the claimed row or null.
  *   complete(id) / fail(id) -- FSM terminal transitions.
  *   reclaimRunning()
- *     - On startup: flips any 'running' rows back to 'pending' (crash recovery,
- *       plan 03 adds the full reclaim with TTL gating).
- *   setRunner(fn) + drain() -- single-worker execution seam.
+ *     - On startup: flips any 'running' rows back to 'pending' (crash recovery, QUEU-02).
+ *   setRunner(fn) + startDrainLoop() -- single-worker execution seam.
+ *
+ * Rate-limit handling (QUEU-05):
+ *   When the runner throws RateLimitError, the job is re-enqueued (back to pending)
+ *   after err.retryAfterMs via setTimeout. The job is NOT marked failed or dropped.
  */
 
 import type Database from 'better-sqlite3';
+import { RateLimitError } from './types.js';
 import type { ClaimedJob } from './types.js';
 
 export type { ClaimedJob };
@@ -86,6 +90,11 @@ export function createQueue(db: Database.Database): Queue {
     `UPDATE job_queue SET status = 'failed' WHERE id = ?`,
   );
 
+  // Flip a specific running row back to pending (used for rate-limit retry, QUEU-05).
+  const stmtReclaimOne = db.prepare(
+    `UPDATE job_queue SET status = 'pending', started_at = NULL WHERE id = ?`,
+  );
+
   const stmtReclaim = db.prepare(
     `UPDATE job_queue SET status = 'pending', started_at = NULL WHERE status = 'running'`,
   );
@@ -138,7 +147,24 @@ export function createQueue(db: Database.Database): Queue {
           try {
             await runner(job);
             complete(job.id);
-          } catch {
+          } catch (err) {
+            if (err instanceof RateLimitError) {
+              // QUEU-05: backoff + re-enqueue instead of marking failed.
+              // Flip the running row back to pending after retryAfterMs.
+              // The row stays 'running' during the wait so reclaimRunning() would
+              // pick it up safely on a crash during the backoff window.
+              const retryMs = err.retryAfterMs;
+              const jobId = job.id;
+              setTimeout(() => {
+                stmtReclaimOne.run(jobId);
+              }, retryMs);
+              // Wait for the normal interval before polling again.
+              if (drainRunning) {
+                drainTimer = setTimeout(() => { void tick(); }, intervalMs);
+              }
+              return;
+            }
+            // Non-rate-limit error: mark the job failed.
             fail(job.id);
           }
           // Immediately try the next job without waiting for the interval.

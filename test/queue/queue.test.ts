@@ -1,17 +1,18 @@
 /**
- * Wave 0 test: SQLite persistent job queue FSM
- * Requirements: QUEU-01, QUEU-02, QUEU-03
+ * Persistent SQLite job queue FSM tests
+ * Requirements: QUEU-01, QUEU-02, QUEU-03, QUEU-04, QUEU-05
  *
  * Tests the createQueue factory from src/queue/queue.ts using in-memory SQLite.
  * The queue API is expected to be:
- *   createQueue(db) -> { enqueue, claimNext, complete, fail, reclaimRunning }
+ *   createQueue(db) -> { enqueue, claimNext, complete, fail, reclaimRunning, setRunner, startDrainLoop, stop }
  *
  * All imports use .js extension per NodeNext ESM resolution.
  */
 
 import Database from 'better-sqlite3';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createQueue } from '../../src/queue/queue.js';
+import { RateLimitError } from '../../src/queue/types.js';
 
 /** Minimal SQLite schema for the job_queue table */
 const SCHEMA_SQL = `
@@ -197,6 +198,119 @@ describe('createQueue (QUEU-01, QUEU-02, QUEU-03)', () => {
     it('claimNext returns null when no pending jobs exist', () => {
       const queue = createQueue(db);
       expect(queue.claimNext()).toBeNull();
+    });
+  });
+
+  // QUEU-04: concurrency cap -- drain loop runs at most one job at a time
+  describe('concurrency cap (QUEU-04)', () => {
+    it('drain loop runs jobs sequentially (not concurrently)', async () => {
+      const queue = createQueue(db);
+      const runOrder: string[] = [];
+
+      // Use a latch so we can control when runner resolves
+      let releaseLatch: (() => void) | undefined;
+
+      queue.setRunner(async (job) => {
+        runOrder.push(`start:${job.pr_id}`);
+        await new Promise<void>((res) => { releaseLatch = res; });
+        runOrder.push(`end:${job.pr_id}`);
+      });
+
+      queue.enqueue('pr-cap-A', JSON.stringify({ sha: 'ca' }));
+      queue.enqueue('pr-cap-B', JSON.stringify({ sha: 'cb' }));
+
+      queue.startDrainLoop(10);
+
+      // Wait for first job to start
+      await new Promise<void>((res) => setTimeout(res, 30));
+
+      // At this point only the first job should have started (not the second)
+      expect(runOrder).toContain('start:pr-cap-A');
+      expect(runOrder).not.toContain('start:pr-cap-B');
+
+      // Release the latch so job A completes
+      releaseLatch?.();
+
+      // Wait for job B to start and complete
+      await new Promise<void>((res) => setTimeout(res, 50));
+      releaseLatch?.();
+
+      await new Promise<void>((res) => setTimeout(res, 30));
+
+      queue.stop();
+
+      // Jobs ran in order, not concurrently
+      const startA = runOrder.indexOf('start:pr-cap-A');
+      const endA = runOrder.indexOf('end:pr-cap-A');
+      const startB = runOrder.indexOf('start:pr-cap-B');
+      if (startB !== -1) {
+        expect(startA).toBeLessThan(endA);
+        expect(endA).toBeLessThan(startB);
+      }
+    });
+  });
+
+  // QUEU-05: rate-limit backoff -- RateLimitError re-enqueues, does not fail
+  describe('rate-limit backoff (QUEU-05)', () => {
+    it('RateLimitError from runner causes job to be re-enqueued (not marked failed)', async () => {
+      const queue = createQueue(db);
+
+      let runCount = 0;
+      // Runner throws RateLimitError on first call
+      queue.setRunner(async (_job) => {
+        runCount++;
+        throw new RateLimitError(50); // 50 ms backoff
+      });
+
+      queue.enqueue('pr-rl', JSON.stringify({ sha: 'rl1' }));
+      queue.startDrainLoop(20);
+
+      // Wait for the first drain tick to run and fail with RateLimitError
+      await new Promise<void>((res) => setTimeout(res, 60));
+
+      queue.stop();
+
+      // Runner was called at least once
+      expect(runCount).toBeGreaterThanOrEqual(1);
+
+      // Job must NOT be 'failed' -- it should be pending (re-enqueued) or running (picked up again)
+      const rows = db
+        .prepare("SELECT status FROM job_queue WHERE pr_id = 'pr-rl'")
+        .all() as Array<{ status: string }>;
+      const statuses = rows.map((r) => r.status);
+      expect(statuses.every((s) => s !== 'failed')).toBe(true);
+    });
+
+    it('job re-enqueued after RateLimitError is eventually retried and completed', async () => {
+      const queue = createQueue(db);
+
+      let runCount = 0;
+
+      queue.setRunner(async (_job) => {
+        runCount++;
+        if (runCount === 1) {
+          throw new RateLimitError(30); // 30 ms backoff
+        }
+        // Second run succeeds (no throw)
+      });
+
+      queue.enqueue('pr-retry', JSON.stringify({ sha: 'r1' }));
+      queue.startDrainLoop(20);
+
+      // Wait long enough for the retry to happen (30ms backoff + drain interval)
+      await new Promise<void>((res) => setTimeout(res, 200));
+
+      queue.stop();
+
+      // Runner should have been called at least twice (initial + retry)
+      expect(runCount).toBeGreaterThanOrEqual(2);
+
+      // After successful retry, job should be done
+      const rows = db
+        .prepare("SELECT status FROM job_queue WHERE pr_id = 'pr-retry'")
+        .all() as Array<{ status: string }>;
+      const statuses = rows.map((r) => r.status);
+      expect(statuses.some((s) => s === 'done')).toBe(true);
     });
   });
 });
