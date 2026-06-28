@@ -105,8 +105,14 @@ function parseBool(v: string | undefined, fallback: boolean): boolean {
   return v.toLowerCase() !== 'false' && v !== '0';
 }
 
+/**
+ * D-14: default suppresses the lowest tier (low). Operators who want every
+ * finding (including low) must explicitly set OPEN_REVIEW_MIN_SEVERITY=low.
+ */
+const DEFAULT_MIN_SEVERITY: MinSeverity = 'medium';
+
 function parseMinSeverityEnv(v: string | undefined): MinSeverity {
-  if (v === undefined) return 'low';
+  if (v === undefined) return DEFAULT_MIN_SEVERITY;
   if ((SEVERITIES as readonly string[]).includes(v)) return v as MinSeverity;
   throw new Error(`Invalid min severity '${v}' -- must be one of: ${SEVERITIES.join(', ')}`);
 }
