@@ -119,6 +119,11 @@ export function buildSandboxEnv(useOAuth: boolean): NodeJS.ProcessEnv {
     // CLAUDE_CODE_OAUTH_TOKEN intentionally absent -- API key fallback.
   }
 
+  // Enable the Claude Code built-in retry watchdog so transient 429/529 errors
+  // are transparently retried by the CLI before we ever see exit code 29 (D-07).
+  // A persistent rate-limit that exhausts retries still surfaces as exit 29.
+  env['CLAUDE_CODE_RETRY_WATCHDOG'] = '1';
+
   // Defensive deletions: these must NEVER appear in the child env (D-10).
   // (Not in the object above, but delete defensively in case of future refactors.)
   delete env['GITHUB_TOKEN'];
@@ -191,6 +196,17 @@ async function spawnClaude(
 // runWithAuthFallback
 // ---------------------------------------------------------------------------
 
+/**
+ * Detect a persistent provider rate limit from the process exit code.
+ *
+ * Phase 1 signal: exit code 29 + optional "retry-after: N" in stderr/stdout (D-07,
+ * Open Question 1 resolution). CLAUDE_CODE_RETRY_WATCHDOG=1 handles transient 429/529
+ * inside the CLI before we see exit 29, so exit 29 means the CLI exhausted its own retries.
+ *
+ * Documented fallback (not implemented -- keep it simple per Open Question 1):
+ *   If exit-29 semantics change in a future CLI release, switch to --output-format stream-json
+ *   and parse the `system/api_retry` event (error: rate_limit) for the retry-after value.
+ */
 function checkRateLimit(result: RawOutput): RawOutput {
   if (result.exitCode === 29) {
     const match = /retry-after:\s*(\d+)/i.exec(result.stderr + result.stdout);
