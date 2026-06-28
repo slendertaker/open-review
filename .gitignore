@@ -1,0 +1,30 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+.secrets/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Runtime data and databases
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+logs/
+*.log
+
+# GSD planning and framework (local only, never part of the OSS repo)
+.planning/
+.claude/
+
+# OS cruft
+.DS_Store
