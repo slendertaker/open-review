@@ -1,14 +1,21 @@
 /**
- * Wave 0 test: PR review poster (50-cap, 422 fallback, ignore globs)
- * Requirements: POST-04, POST-05, NOISE-04
+ * Poster tests (50-cap, 422 fallback, ignore globs, buildSummaryBody, renderInlineComment)
+ * Requirements: POST-03, POST-04, POST-05, NOISE-04
  *
- * Tests partitionFindings, postReview (mocked octokit), and isIgnored
- * from src/poster/post.ts.
+ * Tests partitionFindings, postReview (mocked octokit), isIgnored,
+ * buildSummaryBody, and renderInlineComment from src/poster/post.ts.
  * All imports use .js extension per NodeNext ESM resolution.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { partitionFindings, isIgnored, postReview, DEFAULT_IGNORE_GLOBS } from '../../src/poster/post.js';
+import {
+  partitionFindings,
+  isIgnored,
+  postReview,
+  buildSummaryBody,
+  renderInlineComment,
+  DEFAULT_IGNORE_GLOBS,
+} from '../../src/poster/post.js';
 
 // Canonical Finding type (D-04)
 interface Finding {
@@ -174,5 +181,132 @@ describe('isIgnored (NOISE-04)', () => {
 
   it('returns true for minified JS files', () => {
     expect(isIgnored('dist/bundle.min.js', DEFAULT_IGNORE_GLOBS)).toBe(true);
+  });
+});
+
+describe('buildSummaryBody (POST-03)', () => {
+  const noFindings = { critical: 0, high: 0, medium: 0, low: 0 };
+
+  it('emits [!CAUTION] alert when there are critical findings', () => {
+    const body = buildSummaryBody('', { critical: 2, high: 0, medium: 0, low: 0 }, []);
+    expect(body).toContain('[!CAUTION]');
+  });
+
+  it('emits [!IMPORTANT] alert when there are high (but no critical) findings', () => {
+    const body = buildSummaryBody('', { critical: 0, high: 1, medium: 0, low: 0 }, []);
+    expect(body).toContain('[!IMPORTANT]');
+  });
+
+  it('emits [!NOTE] alert when there are only medium/low findings', () => {
+    const body = buildSummaryBody('', { critical: 0, high: 0, medium: 3, low: 1 }, []);
+    expect(body).toContain('[!NOTE]');
+  });
+
+  it('emits a clean blockquote (no alert tier) when there are no findings', () => {
+    const body = buildSummaryBody('', noFindings, []);
+    // Should NOT include any alert tier
+    expect(body).not.toContain('[!CAUTION]');
+    expect(body).not.toContain('[!IMPORTANT]');
+    expect(body).not.toContain('[!NOTE]');
+  });
+
+  it('includes the prose summary when provided', () => {
+    const body = buildSummaryBody('Great changes overall.', noFindings, []);
+    expect(body).toContain('Great changes overall.');
+  });
+
+  it('includes severity rollup when there are findings', () => {
+    const body = buildSummaryBody('', { critical: 1, high: 2, medium: 3, low: 4 }, []);
+    // Should include counts for all severity levels
+    expect(body).toContain('1');
+    expect(body).toContain('2');
+    expect(body).toContain('3');
+    expect(body).toContain('4');
+  });
+
+  it('omits rollup when there are no findings', () => {
+    const body = buildSummaryBody('', noFindings, []);
+    // Total is 0 -- no rollup line should appear
+    expect(body).not.toContain('finding');
+  });
+
+  it('includes off-diff findings in a <details> section', () => {
+    const offDiff: Finding[] = [
+      { file: 'src/old.ts', line: 42, severity: 'medium', message: 'Old code smell', title: 'Smell' },
+    ];
+    const body = buildSummaryBody('', { critical: 0, high: 0, medium: 1, low: 0 }, offDiff);
+    expect(body).toContain('<details>');
+    expect(body).toContain('src/old.ts');
+    expect(body).toContain('42');
+  });
+
+  it('omits off-diff <details> when offDiff is empty', () => {
+    const body = buildSummaryBody('', { critical: 1, high: 0, medium: 0, low: 0 }, []);
+    expect(body).not.toContain('<details>');
+  });
+
+  it('contains no em-dashes (U+2014) in any emitted text (project style rule)', () => {
+    const body = buildSummaryBody(
+      'Prose summary here.',
+      { critical: 1, high: 2, medium: 3, low: 4 },
+      [{ file: 'src/foo.ts', line: 1, severity: 'high', message: 'A problem', title: 'Issue' }],
+    );
+    // U+2014 is an em-dash -- must not appear in posted text
+    expect(body).not.toContain('—');
+  });
+});
+
+describe('renderInlineComment (POST-03)', () => {
+  it('renders a severity badge and headline', () => {
+    const f: Finding = { file: 'src/a.ts', line: 1, severity: 'critical', message: 'Danger here' };
+    const rendered = renderInlineComment(f);
+    expect(rendered).toContain('CRITICAL');
+    expect(rendered).toContain('Danger here');
+  });
+
+  it('renders a collapsible suggestion block when a suggestion is present', () => {
+    const f: Finding = {
+      file: 'src/a.ts',
+      line: 1,
+      severity: 'high',
+      message: 'Use const',
+      suggestion: 'const x = 1;',
+    };
+    const rendered = renderInlineComment(f);
+    expect(rendered).toContain('<details>');
+    expect(rendered).toContain('const x = 1;');
+  });
+
+  it('omits the suggestion block when no suggestion is provided', () => {
+    const f: Finding = { file: 'src/a.ts', line: 1, severity: 'low', message: 'Minor thing' };
+    const rendered = renderInlineComment(f);
+    expect(rendered).not.toContain('<details>');
+  });
+
+  it('does not duplicate title and message when they are the same', () => {
+    const f: Finding = {
+      file: 'src/a.ts',
+      line: 1,
+      severity: 'medium',
+      message: 'Same text',
+      title: 'Same text',
+    };
+    const rendered = renderInlineComment(f);
+    // "Same text" should appear exactly once as the headline (badge + **headline**)
+    const occurrences = (rendered.match(/Same text/g) ?? []).length;
+    expect(occurrences).toBe(1);
+  });
+
+  it('contains no em-dashes (U+2014) in any emitted text (project style rule)', () => {
+    const f: Finding = {
+      file: 'src/a.ts',
+      line: 1,
+      severity: 'high',
+      message: 'Some message',
+      title: 'Some title',
+      suggestion: 'Some fix',
+    };
+    const rendered = renderInlineComment(f);
+    expect(rendered).not.toContain('—');
   });
 });
