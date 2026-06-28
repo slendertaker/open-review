@@ -13,6 +13,8 @@ let getLastSha: Statement | null = null;
 let setLastSha: Statement | null = null;
 let insertFingerprint: Statement | null = null;
 let getFingerprints: Statement | null = null;
+let pruneReviewsStmt: Statement | null = null;
+let prunePostedStmt: Statement | null = null;
 
 /**
  * Prepare module-level statements against the provided database handle.
@@ -30,6 +32,13 @@ export function initReviews(db: Database.Database): void {
     'INSERT OR IGNORE INTO posted_comments (pr_id, fingerprint, created_at) VALUES (?, ?, ?)',
   );
   getFingerprints = db.prepare('SELECT fingerprint FROM posted_comments WHERE pr_id = ?');
+  // 90-day TTL: prune stale state from both tables to bound growth.
+  pruneReviewsStmt = db.prepare(
+    "DELETE FROM pr_reviews WHERE datetime(updated_at) < datetime('now', '-90 days')",
+  );
+  prunePostedStmt = db.prepare(
+    "DELETE FROM posted_comments WHERE datetime(created_at) < datetime('now', '-90 days')",
+  );
 }
 
 /** Returns the last successfully-reviewed head SHA for a PR, or null if never reviewed. */
@@ -62,4 +71,17 @@ export function recordPostedFingerprints(prId: string, fingerprints: string[]): 
   for (const fp of fingerprints) {
     insertFingerprint.run(prId, fp, now);
   }
+}
+
+/**
+ * TTL prune of both review-state tables (D-13).
+ * Removes pr_reviews and posted_comments rows older than 90 days.
+ * Call alongside delivery prune (startup + daily timer).
+ */
+export function pruneOldReviews(): void {
+  if (!pruneReviewsStmt || !prunePostedStmt) {
+    throw new Error('reviews not initialised -- call openDb() first');
+  }
+  pruneReviewsStmt.run();
+  prunePostedStmt.run();
 }

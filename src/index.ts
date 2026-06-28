@@ -25,6 +25,7 @@
 import { EnvConfigStore } from './config/store.js';
 import { openDb } from './state/db.js';
 import { pruneOldDeliveries } from './state/deliveries.js';
+import { pruneOldReviews } from './state/reviews.js';
 import { createQueue } from './queue/queue.js';
 import { buildServer } from './server.js';
 import { runReview } from './worker/pipeline.js';
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
 
   // Step 4: Startup maintenance.
   pruneOldDeliveries();
+  pruneOldReviews();
   await pruneOrphanedWorktrees();
 
   // Step 5: Create queue + crash recovery.
