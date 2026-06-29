@@ -25,6 +25,7 @@ export class SqliteSessionStore {
   private readonly stmtSet: Statement;
   private readonly stmtDestroy: Statement;
   private readonly stmtPrune: Statement;
+  private readonly stmtDeleteAllExcept: Statement;
 
   constructor(db: Database.Database) {
     // Create table inline so the store works without schema.sql (Pattern 3).
@@ -47,6 +48,16 @@ export class SqliteSessionStore {
     );
     this.stmtDestroy = db.prepare('DELETE FROM sessions WHERE id = ?');
     this.stmtPrune = db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')");
+    this.stmtDeleteAllExcept = db.prepare('DELETE FROM sessions WHERE id != ?');
+  }
+
+  /**
+   * Delete every session row except the one with the given id (WR-01).
+   * Used after a password change to revoke all other active sessions while
+   * keeping the operator's current session signed in (DSEC-01).
+   */
+  deleteAllExcept(currentId: string): void {
+    this.stmtDeleteAllExcept.run(currentId);
   }
 
   /**
@@ -105,4 +116,15 @@ export class SqliteSessionStore {
  */
 export function initSessions(db: Database.Database): SqliteSessionStore {
   return new SqliteSessionStore(db);
+}
+
+/**
+ * Revoke all sessions except the current one, operating directly on a db handle
+ * (WR-01). Used by the change-password route, which holds the shared db handle but
+ * not the SqliteSessionStore instance. Safe to call even if the sessions table is
+ * empty. The statement is prepared per call (this runs at most once per password
+ * change, not on a hot path).
+ */
+export function deleteAllSessionsExcept(db: Database.Database, currentId: string): void {
+  db.prepare('DELETE FROM sessions WHERE id != ?').run(currentId);
 }

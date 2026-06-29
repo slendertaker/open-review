@@ -20,6 +20,7 @@ import argon2 from 'argon2';
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
 import { getSetting, setSetting } from '../state/config-state.js';
+import { deleteAllSessionsExcept } from '../state/sessions.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
 
@@ -33,7 +34,7 @@ type Rep = any;
 export async function registerAccessRoutes(
   fastify: AnyFastify,
   store: ConfigStore,
-  _db: Database.Database,
+  db: Database.Database,
 ): Promise<void> {
   // -------------------------------------------------------------------------
   // POST /dashboard/settings/password -- change dashboard password (DSEC-01)
@@ -97,6 +98,13 @@ export async function registerAccessRoutes(
       // Hash new password (argon2id, T-02-22: plaintext never stored).
       const newHash = await argon2.hash(newPassword, { type: argon2.argon2id });
       setSetting('password_hash', newHash);
+
+      // Revoke all OTHER sessions (WR-01): password rotation is the operator's
+      // "I may be compromised / lost a device" lever, so every previously-issued
+      // session cookie must stop working immediately rather than living out its
+      // 24h TTL. The current session is preserved by id so the operator remains
+      // signed in (DSEC-01).
+      deleteAllSessionsExcept(db, req.session.sessionId);
 
       // Session stays authenticated -- do NOT destroy or regenerate. The operator
       // remains signed in after a successful password rotation (DSEC-01, must_haves).
