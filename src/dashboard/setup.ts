@@ -58,14 +58,20 @@ export function bootSetupToken(store: ConfigStore): string | null {
   // only the token-free path; the full token URL is written once to stdout via
   // console.log, which the pino sink does not capture.
   const port = store.port;
-  const setupPath = `http://localhost:${port}/setup`;
+  // IN-06: prefer the configured public domain (the operator reaches the box by domain,
+  // not localhost). Fall back to localhost:port and tell the operator to substitute their
+  // own host/IP when connecting remotely.
+  const setupPath = store.domain
+    ? `https://${store.domain}/setup`
+    : `http://localhost:${port}/setup`;
   const setupUrl = `${setupPath}?token=${token}`;
   log.info(
     { setupUrl: setupPath },
     'FIRST RUN: no password set -- open the setup URL (printed below) to configure dashboard access',
   );
+  const hostHint = store.domain ? '' : ' (replace localhost with your host/IP if connecting remotely)';
   // eslint-disable-next-line no-console
-  console.log(`\nFIRST RUN setup URL (one time, not logged): ${setupUrl}\n`);
+  console.log(`\nFIRST RUN setup URL${hostHint} (one time, not logged): ${setupUrl}\n`);
 
   return token;
 }
