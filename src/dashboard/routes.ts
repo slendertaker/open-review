@@ -10,7 +10,7 @@
  * single mount point -- Wave 3 plans never edit routes.ts or index.eta.
  */
 
-import { getSetting } from '../state/config-state.js';
+import { getSetting, getSecretRecord } from '../state/config-state.js';
 import { requireLogin, loginHandler, logoutHandler } from './auth.js';
 import { registerGeneralRoutes } from './routes-general.js';
 import { registerReposRoutes } from './routes-repos.js';
@@ -93,12 +93,15 @@ export async function registerDashboardRoutes(
       provider: store.provider,
       domain: store.domain ?? '',
       // Secret presence flags (write-only -- never send plaintext).
+      // webhook_secret lives in the settings table; the five encrypted credentials
+      // are stored in the secrets table via setSecretRecord, so their presence must
+      // be read with getSecretRecord (getSetting would always miss and render "(not set)").
       hasWebhookSecret: !!getSetting('webhook_secret'),
-      hasClaudeOauthToken: !!getSetting('claude_oauth_token'),
-      hasAnthropicApiKey: !!getSetting('anthropic_api_key'),
-      hasGithubToken: !!getSetting('github_token'),
-      hasGithubAppId: !!getSetting('github_app_id'),
-      hasGithubAppPrivateKey: !!getSetting('github_app_private_key'),
+      hasClaudeOauthToken: !!getSecretRecord('claude_oauth_token'),
+      hasAnthropicApiKey: !!getSecretRecord('anthropic_api_key'),
+      hasGithubToken: !!getSecretRecord('github_token'),
+      hasGithubAppId: !!getSecretRecord('github_app_id'),
+      hasGithubAppPrivateKey: !!getSecretRecord('github_app_private_key'),
     });
   });
 
