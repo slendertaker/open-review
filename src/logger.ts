@@ -12,10 +12,11 @@ import pino from 'pino';
 
 /**
  * Regex patterns for secret token prefixes to scrub from free-form strings.
- * Covers Claude/Anthropic API keys, AWS keys, and GitHub tokens.
+ * Covers Claude/Anthropic API keys, AWS keys, GitHub tokens, and Phase 2
+ * OAuth token query-string shapes (D2-06, T-02-04).
  */
 const SCRUB_RE =
-  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+)/gi;
+  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+|oauth_token=[^\s&]+)/gi;
 
 /**
  * Scrub secret token values from a free-form string.
@@ -39,6 +40,11 @@ export function buildLogger(level: string = 'info'): pino.Logger {
         'req.headers.authorization',
         'req.headers["x-hub-signature-256"]',
         'req.headers["x-access-token"]',
+        // Phase 2 additions: session cookie and dashboard form fields (D2-06)
+        'req.headers.cookie',
+        'body.password',
+        'body.newPassword',
+        'body.currentPassword',
       ],
       censor: '[REDACTED]',
     },
