@@ -187,6 +187,12 @@ export function seedFromEnvIfEmpty(db: Database.Database, machineKey: Buffer): v
   const minSev = readEnv('OPEN_REVIEW_MIN_SEVERITY');
   if (minSev) setSetting('min_severity', minSev);
 
+  // IN-05: seed the provider override too, so the SQLite store stays consistent with
+  // EnvConfigStore (which honors OPEN_REVIEW_PROVIDER) instead of silently dropping it
+  // to the 'claude' default on first boot.
+  const providerEnv = readEnv('OPEN_REVIEW_PROVIDER');
+  if (providerEnv) setSetting('provider', providerEnv);
+
   setSetting('skip_drafts', parseBoolStr(readEnv('OPEN_REVIEW_SKIP_DRAFTS'), true));
   setSetting('skip_forks', parseBoolStr(readEnv('OPEN_REVIEW_SKIP_FORKS'), true));
 
