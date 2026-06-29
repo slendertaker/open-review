@@ -16,7 +16,7 @@ import pino from 'pino';
  * OAuth token query-string shapes (D2-06, T-02-04).
  */
 const SCRUB_RE =
-  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+|oauth_token=[^\s&]+)/gi;
+  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+|oauth_token=[^\s&]+|token=[0-9a-fA-F]{32,})/gi;
 
 /**
  * Scrub secret token values from a free-form string.

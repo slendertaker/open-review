@@ -9,7 +9,7 @@
  * exempt from the session gate and operate only via the setup token.
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import argon2 from 'argon2';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FastifyApp = any;
@@ -27,6 +27,19 @@ import type { ConfigStore } from '../config/store.js';
 // ---------------------------------------------------------------------------
 
 /**
+ * Constant-time comparison of the supplied setup token against the stored token
+ * (CR-02). The setup token is a pre-auth account-takeover credential, so it must
+ * be compared like any other secret to avoid leaking length/content via timing.
+ * Length-safe: returns false for mismatched lengths without calling timingSafeEqual
+ * on unequal-length buffers (which would throw).
+ */
+function tokensMatch(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
+
+/**
  * Generate and store a setup token if no password is configured.
  * Emits the first-run setup URL at info level (required -- Pattern 7).
  * Returns null when a password is already set.
@@ -37,14 +50,22 @@ export function bootSetupToken(store: ConfigStore): string | null {
   const token = randomBytes(24).toString('hex'); // 48-char hex token
   setSetting('setup_token', token);
 
-  // MANDATORILY log the setup URL (Pattern 7). Without this an operator who
+  // MANDATORILY surface the setup URL (Pattern 7). Without this an operator who
   // restarts before setting a password has no way to recover the token.
+  //
+  // CR-02: the token is a pre-auth account-takeover credential and must NOT enter
+  // the structured log sink (journald -> aggregation/backups). The info log carries
+  // only the token-free path; the full token URL is written once to stdout via
+  // console.log, which the pino sink does not capture.
   const port = store.port;
-  const setupUrl = `http://localhost:${port}/setup?token=${token}`;
+  const setupPath = `http://localhost:${port}/setup`;
+  const setupUrl = `${setupPath}?token=${token}`;
   log.info(
-    { setupUrl },
-    'FIRST RUN: no password set -- open the setup URL to configure dashboard access',
+    { setupUrl: setupPath },
+    'FIRST RUN: no password set -- open the setup URL (printed below) to configure dashboard access',
   );
+  // eslint-disable-next-line no-console
+  console.log(`\nFIRST RUN setup URL (one time, not logged): ${setupUrl}\n`);
 
   return token;
 }
@@ -104,7 +125,7 @@ export async function registerSetupRoutes(
     const token = query.token ?? '';
     const storedToken = getSetting('setup_token');
 
-    const tokenValid = token && storedToken && token === storedToken;
+    const tokenValid = !!token && !!storedToken && tokensMatch(token, storedToken);
 
     if (!tokenValid) {
       return reply.viewAsync('setup', {
@@ -148,7 +169,7 @@ export async function registerSetupRoutes(
       const confirm = body['confirm'] ?? '';
 
       const storedToken = getSetting('setup_token');
-      const tokenValid = token && storedToken && token === storedToken;
+      const tokenValid = !!token && !!storedToken && tokensMatch(token, storedToken);
 
       if (!tokenValid) {
         const csrfToken = await reply.generateCsrf();
