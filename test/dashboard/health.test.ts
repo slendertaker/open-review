@@ -183,4 +183,23 @@ describe('Health aggregation partial (DACT-03)', () => {
     // requireLogin redirects to /login (302) or returns 401
     expect([301, 302, 401]).toContain(res.statusCode);
   });
+
+  // WR-01: the polled partial must be a bare fragment, not a layout-wrapped
+  // full HTML document. htmx swaps this into the live DOM every 5s; a full
+  // <!DOCTYPE>/<html>/<head>/<style> payload would be injected each poll.
+  it('GET /activity/partial returns a bare fragment with no layout wrapper', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/activity/partial',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as string;
+    expect(body).not.toContain('<!DOCTYPE');
+    expect(body).not.toContain('<html');
+    expect(body).not.toContain('<head');
+  });
 });

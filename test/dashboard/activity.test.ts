@@ -175,6 +175,31 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     expect(res.body as string).toMatch(/42|#42/);
   });
 
+  // WR-02 / WR-03: the full feed page must contain exactly one #activity-list
+  // and one #health-panel. Previously activity.eta wrapped the partial in its
+  // own polling container AND the partial re-emitted both ids, producing
+  // duplicate ids and two parallel 5s pollers.
+  it('GET /activity renders exactly one #activity-list and one #health-panel', async () => {
+    const cookie = await login();
+
+    insertReviewRun({ repo: 'testrepo', prNumber: 42 });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/activity',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.body as string;
+    const activityListIds = body.match(/id="activity-list"/g) ?? [];
+    const healthPanelIds = body.match(/id="health-panel"/g) ?? [];
+    const pollers = body.match(/hx-trigger="every 5s"/g) ?? [];
+    expect(activityListIds).toHaveLength(1);
+    expect(healthPanelIds).toHaveLength(1);
+    expect(pollers).toHaveLength(1);
+  });
+
   // T-03-04: feed login gate
   it('GET /activity requires login', async () => {
     const res = await server.inject({
