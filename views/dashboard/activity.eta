@@ -13,4 +13,7 @@
        hx-swap="outerHTML">
     <%~ include('./partials/activity-list', it) %>
   </div>
+  <div id="health-panel">
+    <%~ include('./partials/health', it) %>
+  </div>
 </main>

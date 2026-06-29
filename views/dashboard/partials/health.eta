@@ -1,0 +1,64 @@
+<section id="health-panel" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+  <div class="section-header">
+    <span class="bracket-prefix">[+]</span>
+    <h2 class="heading-md">Service health</h2>
+  </div>
+
+  <div class="field-row" style="margin-top: var(--spacing-md);">
+
+    <!-- Queue depth -->
+    <p class="body-md">
+      <strong>Queue:</strong>
+      <span><%= it.health.pending %> pending, <%= it.health.running %> running</span>
+    </p>
+
+    <!-- Last review -->
+    <p class="body-md">
+      <strong>Last review:</strong>
+      <% if (it.health.lastRun) { %>
+        <%
+          const lr = it.health.lastRun;
+          let lrMarker = '[?]';
+          if (lr.status === 'success')      { lrMarker = '[+]'; }
+          else if (lr.status === 'failed')  { lrMarker = '[x]'; }
+          else if (lr.status === 'running') { lrMarker = '[~]'; }
+          else if (lr.status === 'rate_limited') { lrMarker = '[!]'; }
+        %>
+        <span class="bracket-prefix" style="font-family: monospace;"><%= lrMarker %></span>
+        <a href="/activity/<%= lr.id %>" style="color: var(--color-fg); text-decoration: none;">
+          <%= lr.owner %>/<%= lr.repo %> #<%= lr.pr_number %>
+        </a>
+        <span class="caption-md" style="color: var(--color-mute);">(<%= lr.status %>)</span>
+        <% if (lr.finished_at) { %>
+        <span class="caption-md" style="color: var(--color-mute);"><%= lr.finished_at %></span>
+        <% } %>
+      <% } else { %>
+        <span style="color: var(--color-mute);">No reviews yet.</span>
+      <% } %>
+    </p>
+
+    <!-- Provider and credential status -->
+    <p class="body-md">
+      <strong>Provider:</strong>
+      <span><%= it.health.provider %></span>
+      <% if (it.health.hasOauthToken || it.health.hasApiKey) { %>
+        <span class="caption-md" style="color: var(--color-mute);">[credential present]</span>
+      <% } else { %>
+        <span class="caption-md" style="color: var(--color-error);">[no credential]</span>
+      <% } %>
+    </p>
+
+    <!-- CLI status -->
+    <p class="body-md">
+      <strong>CLI:</strong>
+      <% if (it.health.cliVersion) { %>
+        <span class="caption-md" style="color: var(--color-mute);">v<%= it.health.cliVersion %></span>
+      <% } else { %>
+        <span class="caption-md" style="color: var(--color-error);">
+          unreachable<% if (it.health.cliError) { %>: <%= it.health.cliError %><% } %>
+        </span>
+      <% } %>
+    </p>
+
+  </div>
+</section>

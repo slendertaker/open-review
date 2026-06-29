@@ -38,3 +38,8 @@
   <% } %>
 </section>
 </div>
+
+<!-- OOB health panel: htmx 2.x hx-swap-oob swaps by element id on same poll response -->
+<div id="health-panel" hx-swap-oob="true">
+  <%~ include('./health', it) %>
+</div>
