@@ -8,7 +8,7 @@
 
 import argon2 from 'argon2';
 import Database from 'better-sqlite3';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { openDb } from '../../src/state/db.js';
 import { buildServer } from '../../src/server.js';
 import { SqliteConfigStore } from '../../src/config/sqlite-store.js';
@@ -202,5 +202,55 @@ describe('dashboard auth (DSEC-01) -- Plan 02', () => {
       headers: { cookie },
     });
     expect(loginRes.body).toContain('Too many failed attempts');
+  });
+
+  it('clears the lockout once the window has elapsed (D2-10)', async () => {
+    // Freeze the clock, trip the lockout, then jump past the 15-minute window
+    // and confirm isLocked's expiry branch (auth.ts) drops the lock so a valid
+    // password authenticates again.
+    const t0 = 1_700_000_000_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(t0);
+
+    // Trip the lockout with attempts beyond the threshold (5).
+    for (let i = 0; i < 6; i++) {
+      const { csrf, cookie } = await loginPagePrelude();
+      await server.inject({
+        method: 'POST',
+        url: '/login',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+        payload: `password=wrong-${i}&_csrf=${encodeURIComponent(csrf)}`,
+      });
+    }
+
+    // While still inside the window, even the correct password is rejected
+    // (the lockout short-circuits before the password is checked).
+    {
+      const { csrf, cookie } = await loginPagePrelude();
+      const lockedRes = await server.inject({
+        method: 'POST',
+        url: '/login',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+        payload: `password=${encodeURIComponent(PASSWORD)}&_csrf=${encodeURIComponent(csrf)}`,
+      });
+      expect(lockedRes.headers.location).not.toBe('/dashboard');
+    }
+
+    // Advance past LOCKOUT_WINDOW_MS (15 minutes); the expiry branch clears it.
+    nowSpy.mockReturnValue(t0 + 16 * 60 * 1000);
+
+    // The correct password now authenticates and redirects to /dashboard.
+    {
+      const { csrf, cookie } = await loginPagePrelude();
+      const okRes = await server.inject({
+        method: 'POST',
+        url: '/login',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+        payload: `password=${encodeURIComponent(PASSWORD)}&_csrf=${encodeURIComponent(csrf)}`,
+      });
+      expect(okRes.statusCode).toBe(302);
+      expect(okRes.headers.location).toBe('/dashboard');
+    }
+
+    nowSpy.mockRestore();
   });
 });
