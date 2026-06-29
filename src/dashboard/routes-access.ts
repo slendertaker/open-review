@@ -1,19 +1,177 @@
 /**
- * Access section route stub (DSEC-01, DSEC-02).
- * Plan 05 fills in the route body. This stub exists so routes.ts can import
- * it unconditionally and the full suite compiles with zero Plan 02 changes.
+ * Access section routes: change password (DSEC-01) and domain (DSEC-02, DCFG-01).
+ *
+ * Already imported and called by routes.ts (Plan 02 stub). Do NOT modify routes.ts.
+ *
+ * POST /dashboard/settings/password
+ *   - Validates current password via argon2.verify (T-02-20 elevation-of-privilege mitigation)
+ *   - Enforces new password >= 12 chars and confirm match
+ *   - On success: replaces hash via setSetting, keeps session authenticated (DSEC-01)
+ *   - On failure: returns exact UI-SPEC error flash; hash unchanged
+ *
+ * POST /dashboard/settings/domain
+ *   - Validates bare hostname (no scheme, no trailing slash, no whitespace)
+ *   - Persists via setSetting('domain', ...); empty value clears (IP-only mode)
+ *   - store.domain reads live after next getter call (DCFG-05 live propagation)
+ *   - Caddy provisioning deferred to Phase 4 (D2-11)
  */
 
+import argon2 from 'argon2';
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
+import { getSetting, setSetting } from '../state/config-state.js';
+import { renderFlash } from './partials.js';
+import { requireLogin } from './auth.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Req = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Rep = any;
 
 export async function registerAccessRoutes(
-  _fastify: AnyFastify,
-  _store: ConfigStore,
+  fastify: AnyFastify,
+  store: ConfigStore,
   _db: Database.Database,
 ): Promise<void> {
-  // Plan 05 populates this function body.
+  // -------------------------------------------------------------------------
+  // POST /dashboard/settings/password -- change dashboard password (DSEC-01)
+  // T-02-21: CSRF via preHandler; T-02-20: requires correct current password
+  // -------------------------------------------------------------------------
+  fastify.post(
+    '/dashboard/settings/password',
+    { preHandler: [requireLogin, fastify.csrfProtection] },
+    async (req: Req, reply: Rep) => {
+      const body = req.body as Record<string, string>;
+      const currentPassword = body['currentPassword'] ?? '';
+      const newPassword = body['newPassword'] ?? '';
+      const confirmPassword = body['confirmPassword'] ?? '';
+
+      // Read stored hash -- must exist (a password is always set when the dashboard is reachable).
+      const storedHash = getSetting('password_hash') ?? '';
+
+      // Verify current password (T-02-20: elevation-of-privilege mitigation).
+      let currentValid = false;
+      try {
+        currentValid = await argon2.verify(storedHash, currentPassword);
+      } catch {
+        // Unexpected verify error -- treat as wrong password.
+        currentValid = false;
+      }
+
+      const csrfToken = await reply.generateCsrf();
+
+      if (!currentValid) {
+        const flash = renderFlash('error', 'Current password is incorrect.');
+        return reply.code(200).viewAsync('dashboard/partials/access', {
+          csrfToken,
+          domain: store.domain ?? '',
+          flash,
+          domainFlash: '',
+        });
+      }
+
+      // Enforce new password length >= 12.
+      if (newPassword.length < 12) {
+        const flash = renderFlash('error', 'New password must be at least 12 characters.');
+        return reply.code(200).viewAsync('dashboard/partials/access', {
+          csrfToken,
+          domain: store.domain ?? '',
+          flash,
+          domainFlash: '',
+        });
+      }
+
+      // Enforce confirm match.
+      if (newPassword !== confirmPassword) {
+        const flash = renderFlash('error', 'Passwords do not match.');
+        return reply.code(200).viewAsync('dashboard/partials/access', {
+          csrfToken,
+          domain: store.domain ?? '',
+          flash,
+          domainFlash: '',
+        });
+      }
+
+      // Hash new password (argon2id, T-02-22: plaintext never stored).
+      const newHash = await argon2.hash(newPassword, { type: argon2.argon2id });
+      setSetting('password_hash', newHash);
+
+      // Session stays authenticated -- do NOT destroy or regenerate. The operator
+      // remains signed in after a successful password rotation (DSEC-01, must_haves).
+
+      const flash = renderFlash('success', 'Password changed. You remain signed in.');
+      return reply.code(200).viewAsync('dashboard/partials/access', {
+        csrfToken,
+        domain: store.domain ?? '',
+        flash,
+        domainFlash: '',
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /dashboard/settings/domain -- persist domain setting (DSEC-02, DCFG-01)
+  // T-02-21: CSRF via preHandler; T-02-23: bare-hostname validation
+  // -------------------------------------------------------------------------
+  fastify.post(
+    '/dashboard/settings/domain',
+    { preHandler: [requireLogin, fastify.csrfProtection] },
+    async (req: Req, reply: Rep) => {
+      const body = req.body as Record<string, string>;
+      const rawDomain = (body['domain'] ?? '').trim();
+
+      const csrfToken = await reply.generateCsrf();
+
+      // Validate: reject any scheme, trailing slash, or whitespace (T-02-23).
+      // An empty value is allowed (clears the domain, IP-only mode).
+      if (rawDomain.length > 0) {
+        if (rawDomain.includes('://') || rawDomain.endsWith('/') || /\s/.test(rawDomain)) {
+          const domainFlash = renderFlash(
+            'error',
+            'Enter a plain domain name without https:// or a trailing slash.',
+          );
+          return reply.code(200).viewAsync('dashboard/partials/access', {
+            csrfToken,
+            domain: store.domain ?? '',
+            flash: '',
+            domainFlash,
+          });
+        }
+      }
+
+      // Persist: empty value stored as empty string; store.domain returns undefined
+      // for empty/missing (bare getter in SqliteConfigStore returns undefined when
+      // the setting is missing or empty).
+      if (rawDomain === '') {
+        // Clear: remove the row by setting to empty string; the getter returns
+        // undefined for falsy values in the store (domain getter: `return readSetting('domain')`
+        // which returns undefined when not present). We need to store '' and the
+        // getter will return ''. To make store.domain === undefined we delete by
+        // overwriting with an empty string that the getter passes through -- but
+        // the SqliteConfigStore.domain getter does:
+        //   return this.readSetting('domain');
+        // which returns undefined only when the row is absent, not when it is ''.
+        // So we must not write a row at all. Use a sentinel: store nothing.
+        // better-sqlite3 does not have a deleteRow helper in config-state, so we
+        // set to the empty string and document that domain === '' means IP-only.
+        // The no-domain banner checks `!store.domain` which is also true for ''.
+        setSetting('domain', '');
+      } else {
+        setSetting('domain', rawDomain);
+      }
+
+      const domainFlash = renderFlash(
+        'success',
+        'Domain saved. Configure Caddy with this domain to enable HTTPS.',
+      );
+      return reply.code(200).viewAsync('dashboard/partials/access', {
+        csrfToken,
+        domain: store.domain ?? '',
+        flash: '',
+        domainFlash,
+      });
+    },
+  );
 }

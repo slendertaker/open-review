@@ -114,7 +114,9 @@ export class SqliteConfigStore implements ConfigStore {
   }
 
   get domain(): string | undefined {
-    return this.readSetting('domain');
+    const v = this.readSetting('domain');
+    // Treat empty string as absent (IP-only mode; stored by the Access domain-clear handler).
+    return v === undefined || v === '' ? undefined : v;
   }
 
   get sessionSecret(): string {
