@@ -1,0 +1,9 @@
+<section id="general-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+  <div class="section-header">
+    <span class="bracket-prefix">[+]</span>
+    <h2 class="heading-md">General</h2>
+  </div>
+  <div>
+    <!-- Wave 3 (Plan 03) replaces this body with the General settings fields. -->
+  </div>
+</section>

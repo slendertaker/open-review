@@ -1,0 +1,9 @@
+<section id="provider-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+  <div class="section-header">
+    <span class="bracket-prefix">[+]</span>
+    <h2 class="heading-md">Provider</h2>
+  </div>
+  <div>
+    <!-- Wave 3 (Plan 04) replaces this body with the provider selector and secrets. -->
+  </div>
+</section>
