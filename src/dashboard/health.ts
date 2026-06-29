@@ -54,6 +54,33 @@ export function resetCliProbeCache(): void {
   cliProbeCache = null;
 }
 
+// ---------------------------------------------------------------------------
+// Queue-count statement cache (IN-03)
+// ---------------------------------------------------------------------------
+
+// The two queue-depth COUNT queries are compiled once per db handle and reused
+// across the 5-second health poll, instead of re-preparing on every call. The
+// cache is keyed by the db handle so a caller passing a different database gets
+// statements bound to that handle (this also scopes the IN-02 footgun: queue
+// counts always read from the handle they were prepared against).
+interface QueueCountStmts {
+  pending: Database.Statement<unknown[]>;
+  running: Database.Statement<unknown[]>;
+}
+const queueCountCache = new WeakMap<Database.Database, QueueCountStmts>();
+
+function getQueueCountStmts(db: Database.Database): QueueCountStmts {
+  let stmts = queueCountCache.get(db);
+  if (!stmts) {
+    stmts = {
+      pending: db.prepare(`SELECT COUNT(*) AS cnt FROM job_queue WHERE status = 'pending'`),
+      running: db.prepare(`SELECT COUNT(*) AS cnt FROM job_queue WHERE status = 'running'`),
+    };
+    queueCountCache.set(db, stmts);
+  }
+  return stmts;
+}
+
 /**
  * Return the cached CLI probe result if it is still within the TTL window.
  * Otherwise run the probe function, cache the result, and return it.
@@ -115,18 +142,20 @@ export async function computeHealthData(
   db: Database.Database,
   store: ConfigStore,
 ): Promise<HealthData> {
-  // Queue depth counts.
-  const pendingRow = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM job_queue WHERE status = 'pending'`)
-    .get() as { cnt: number };
-  const runningRow = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM job_queue WHERE status = 'running'`)
-    .get() as { cnt: number };
+  // Queue depth counts -- statements cached per db handle (IN-03).
+  const stmts = getQueueCountStmts(db);
+  const pendingRow = stmts.pending.get() as { cnt: number };
+  const runningRow = stmts.running.get() as { cnt: number };
 
   const pending = pendingRow.cnt;
   const running = runningRow.cnt;
 
-  // Last review run (newest row).
+  // Last review run (newest row). This intentionally uses the module-global
+  // review-runs accessor (bound to the DB passed to initReviewRuns at openDb
+  // time) rather than the injected `db`. In the single-DB runtime they are the
+  // same handle; the whole review-runs module follows this module-global pattern
+  // by convention. The single-DB invariant is what keeps this read consistent
+  // with the queue counts above (IN-02).
   const lastRun = getReviewRunPage(1, 0)[0] ?? null;
 
   // Provider and credential presence.
