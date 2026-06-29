@@ -68,13 +68,15 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
   }
 
   /**
-   * Get a CSRF token from GET /activity (authenticated).
-   * Note: fetches from /activity, not /dashboard, per plan contract.
+   * Get a CSRF token (authenticated). Fetched from /dashboard, which always
+   * renders forms carrying a session-scoped _csrf token. (The /activity page no
+   * longer carries a page-level orphan _csrf input -- IN-04 -- so an empty feed
+   * exposes no token; CSRF tokens are session-bound and valid across routes.)
    */
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/activity',
+      url: '/dashboard',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);

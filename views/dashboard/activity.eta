@@ -6,6 +6,5 @@
 </nav>
 
 <main class="content-column">
-  <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
   <%~ include('./partials/activity-list', it) %>
 </main>
