@@ -31,6 +31,7 @@ import { setSetting, setSecretRecord, getSecretRecord } from '../state/config-st
 import { encryptSecret, decryptSecret, maskSecret } from '../config/crypto.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
+import { log, scrub } from '../logger.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -112,9 +113,12 @@ export async function registerSecretsRoutes(
     async (req: Req, reply: Rep) => {
       const body = req.body as Record<string, string | undefined>;
 
-      try {
-        const machineKey = await getMachineKey();
+      // Resolve the machine key before the try so the catch can reuse the REAL key
+      // for its error re-render (WR-06) rather than an all-zero buffer that would
+      // make every stored secret render as "(decryption error)".
+      const machineKey = await getMachineKey();
 
+      try {
         // Process each secret field. Write-only: blank = skip (D2-06, T-02-19).
         // webhookSecret: stored as a plain setting (not in secrets table).
         const webhookSecret = body['webhookSecret'];
@@ -147,9 +151,12 @@ export async function registerSecretsRoutes(
           flash,
         });
       } catch (err: unknown) {
+        // WR-06: log the underlying error (scrubbed) so the "Check the logs"
+        // message has something to point at, and reuse the real machine key for
+        // the error re-render so existing secrets still show their masked preview.
+        log.error({ err: scrub(String(err)) }, 'secrets: save failed');
         const csrfToken = await reply.generateCsrf();
         const flash = renderFlash('error', 'Failed to save secrets. Check the logs for details.');
-        const machineKey = _machineKey ?? Buffer.alloc(32);
         return reply.code(200).viewAsync('dashboard/partials/secrets', {
           ...buildSecretsViewData(store, machineKey),
           csrfToken,
