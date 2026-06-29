@@ -66,7 +66,10 @@ export function decryptSecret(record: string, key: Buffer): string {
  * except its final four.
  */
 export function maskSecret(value: string, prefix?: string): string {
-  const last4 = value.slice(-4);
+  // Only reveal the trailing 4 chars when the value is longer than 4 (WR-03):
+  // value.slice(-4) on a value of length <= 4 returns the WHOLE string, which would
+  // render a short secret in full and violate the masking contract above.
+  const last4 = value.length > 4 ? value.slice(-4) : '';
   const bullets = BULLET.repeat(4);
   return prefix ? `${prefix}${bullets}${last4}` : `${bullets}${last4}`;
 }
