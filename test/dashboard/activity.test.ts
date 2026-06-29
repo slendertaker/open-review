@@ -293,8 +293,11 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
       payload: `_csrf=${encodeURIComponent(csrf)}`,
     });
 
-    // Should succeed (redirect or 200)
-    expect([200, 302]).toContain(res.statusCode);
+    // Should succeed with an htmx client-side redirect (WR-04/WR-05)
+    expect([200, 204, 302]).toContain(res.statusCode);
+    if (res.statusCode === 204) {
+      expect(res.headers['hx-redirect']).toBe('/activity');
+    }
 
     // Enqueue must have been called exactly once
     expect(enqueueCalls).toHaveLength(1);
@@ -387,7 +390,7 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
       payload: `_csrf=${encodeURIComponent(csrf)}`,
     });
 
-    expect([200, 302]).toContain(res.statusCode);
+    expect([200, 204, 302]).toContain(res.statusCode);
     expect(enqueueCalls).toHaveLength(1);
 
     const parsed = JSON.parse(enqueueCalls[0]!.payload) as Record<string, unknown>;

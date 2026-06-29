@@ -135,7 +135,13 @@ export async function registerActivityRoutes(
 
       _enqueue(run.pr_id, JSON.stringify(jobPayload));
 
-      return reply.redirect('/activity');
+      // Respond with HX-Redirect so htmx performs a real client-side navigation
+      // back to the feed instead of swapping a full layout-wrapped document into
+      // the htmx target (feed: #activity-list / detail: hx-swap="none"). A plain
+      // 302 was transparently followed by htmx and the resulting full page was
+      // either injected into #activity-list (WR-04) or silently discarded so the
+      // button appeared dead (WR-05). (WR-04, WR-05)
+      return reply.header('HX-Redirect', '/activity').code(204).send();
     },
   );
 }
