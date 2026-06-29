@@ -13,7 +13,8 @@
  *   - Validates bare hostname (no scheme, no trailing slash, no whitespace)
  *   - Persists via setSetting('domain', ...); empty value clears (IP-only mode)
  *   - store.domain reads live after next getter call (DCFG-05 live propagation)
- *   - Caddy provisioning deferred to Phase 4 (D2-11)
+ *   - Re-renders Caddyfile and applies via Caddy admin API (D4-06, DSEC-02)
+ *   - Caddy reload failure degrades to a warning flash at HTTP 200 (never 500)
  */
 
 import argon2 from 'argon2';
@@ -23,6 +24,7 @@ import { getSetting, setSetting, deleteSetting } from '../state/config-state.js'
 import { deleteAllSessionsExcept } from '../state/sessions.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
+import { applyDomain } from './caddy.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -158,10 +160,32 @@ export async function registerAccessRoutes(
         setSetting('domain', rawDomain);
       }
 
-      const domainFlash = renderFlash(
-        'success',
-        'Domain saved. Configure Caddy with this domain to enable HTTPS.',
-      );
+      // D4-06: re-render the Caddyfile from the now-persisted domain and apply it
+      // to the running Caddy via the admin API plus the on-disk file.
+      // Failure must never 500 the dashboard -- the domain is already persisted.
+      let domainFlash: string;
+      try {
+        await applyDomain(store.domain, store.port);
+        if (store.domain) {
+          domainFlash = renderFlash(
+            'success',
+            `Domain saved. HTTPS is being provisioned for ${store.domain}.`,
+          );
+        } else {
+          domainFlash = renderFlash(
+            'success',
+            'Domain cleared. The dashboard is now served over HTTP on the server IP.',
+          );
+        }
+      } catch {
+        // Caddy reload failed. The domain change is already saved; surface a
+        // warning so the operator can finish enabling HTTPS manually.
+        domainFlash = renderFlash(
+          'error',
+          'Domain saved, but applying it to the reverse proxy failed. Run: systemctl reload caddy on the server to finish enabling HTTPS.',
+        );
+      }
+
       return reply.code(200).viewAsync('dashboard/partials/access', {
         csrfToken,
         domain: store.domain ?? '',
