@@ -23,7 +23,7 @@ export interface ReviewRunInsert {
   pr_number: number;
   head_sha: string;
   base_sha: string;
-  installation_id: number | null;
+  installation_id?: number | null;
   provider: string;
   mode: 'full' | 'incremental';
 }

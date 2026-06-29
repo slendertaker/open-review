@@ -154,7 +154,24 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
     recordPostedFingerprints(prId, freshFindings.map(fingerprintFinding));
     setLastReviewedSha(prId, job.headSha);
 
-    return { findings: freshFindings, summary: parsed.summary };
+    // Build a scrubbed, bounded log string for durable storage (D3-04).
+    // Combines key review-complete fields with a bounded tail of provider output.
+    const logMeta = JSON.stringify({
+      repo: `${job.owner}/${job.repo}`,
+      prNumber: job.prNumber,
+      mode: incremental ? 'incremental' : 'full',
+      findingCount: parsed.findings.length,
+      freshCount: freshFindings.length,
+    });
+    const outTail = typeof out === 'string' ? out : String(out ?? '');
+    const rawLog = scrub(`${logMeta}\n${outTail}`);
+
+    return {
+      findings: freshFindings,
+      summary: parsed.summary,
+      mode: incremental ? 'incremental' : 'full',
+      rawLog,
+    };
   } finally {
     // SC5: cleanup runs on every exit path.
     await releaseWorktree(wtDir, bareDir).catch((err: unknown) => {

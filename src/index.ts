@@ -28,15 +28,27 @@ import { SqliteConfigStore, seedFromEnvIfEmpty } from './config/sqlite-store.js'
 import { openDb } from './state/db.js';
 import { pruneOldDeliveries } from './state/deliveries.js';
 import { pruneOldReviews } from './state/reviews.js';
+import { insertRunning, updateTerminal, pruneOldReviewRuns } from './state/review-runs.js';
 import { createQueue } from './queue/queue.js';
 import { buildServer } from './server.js';
 import { runReview } from './worker/pipeline.js';
 import { pruneOrphanedWorktrees } from './worker/repo.js';
 import { assertSqliteVersion, assertClaudeVersion } from './startup.js';
 import { bootSetupToken } from './dashboard/setup.js';
-import { log } from './logger.js';
+import { log, scrub } from './logger.js';
 import type { JobPayload } from './queue/types.js';
+import { RateLimitError } from './queue/types.js';
 import type { ClaimedJob } from './queue/queue.js';
+
+/**
+ * Tail-truncate a string to maxBytes by keeping the end of the buffer.
+ * Ensures stored log text never exceeds a bounded size (D3-04).
+ */
+function captureTail(text: string, maxBytes: number): string {
+  const buf = Buffer.from(text, 'utf8');
+  if (buf.byteLength <= maxBytes) return text;
+  return buf.subarray(buf.byteLength - maxBytes).toString('utf8');
+}
 
 async function main(): Promise<void> {
   // Step 1: Load machine key and open database.
@@ -66,6 +78,7 @@ async function main(): Promise<void> {
   // Step 5: Startup maintenance.
   pruneOldDeliveries();
   pruneOldReviews();
+  pruneOldReviewRuns();
   await pruneOrphanedWorktrees();
 
   // Step 6: Create queue + crash recovery.
@@ -76,7 +89,50 @@ async function main(): Promise<void> {
   // store reads live at job time -- no snapshot (DCFG-05).
   queue.setRunner(async (job: ClaimedJob) => {
     const payload = JSON.parse(job.payload) as JobPayload;
-    await runReview(payload, store);
+    const { owner, repo, prNumber, headSha, baseSha, installationId } = payload;
+    const prId = `${owner}/${repo}#${prNumber}`;
+
+    // D3-03: insert a running row before the review starts.
+    const runId = insertRunning({
+      pr_id: prId,
+      owner,
+      repo,
+      pr_number: prNumber,
+      head_sha: headSha,
+      base_sha: baseSha,
+      installation_id: installationId ?? null,
+      provider: store.provider,
+      mode: 'full',
+    });
+
+    try {
+      const result = await runReview(payload, store);
+
+      // D3-03: transition to success.
+      updateTerminal(runId, {
+        status: 'success',
+        finding_count: result.findings.length,
+        findings_json: JSON.stringify(result.findings),
+        summary: result.summary,
+        error: null,
+        log: captureTail(result.rawLog, 64 * 1024),
+        mode: result.mode,
+      });
+    } catch (err: unknown) {
+      // D3-03: transition to rate_limited or failed; re-throw so the drain
+      // loop's RateLimitError/fail() branches handle queue state correctly.
+      const status = err instanceof RateLimitError ? 'rate_limited' : 'failed';
+      updateTerminal(runId, {
+        status,
+        finding_count: 0,
+        findings_json: '[]',
+        summary: '',
+        error: scrub(String(err)),
+        log: '',
+        mode: 'full',
+      });
+      throw err;
+    }
   });
 
   // Step 8: Build and start the server.

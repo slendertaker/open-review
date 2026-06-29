@@ -22,6 +22,8 @@ export interface JobResult {
     message: string;
   }>;
   summary: string;
+  mode: 'full' | 'incremental';
+  rawLog: string;
 }
 
 /**
