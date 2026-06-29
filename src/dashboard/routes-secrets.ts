@@ -40,44 +40,9 @@ type Req = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rep = any;
 
-// The machine key is on the store's instance. We need it for encrypting new values.
-// We extract it from the store by using the store's readSecret method indirectly,
-// OR we pass the key via the route data. Since SqliteConfigStore holds the key privately,
-// we use the store to decrypt existing records and pass the key via a closure.
-// However the store does not expose the key publicly -- by design (D2-05).
-//
-// Resolution: the route handler encrypts new secrets using the same store that
-// decrypts them. We provide a helper that reads the machine key from the environment
-// the same way SqliteConfigStore does (via crypto.loadMachineKey), so the key is
-// always consistent. This avoids adding a public key getter to the store interface.
-//
-// In tests, the machine key is Buffer.alloc(32, 0x43) -- the same key used to
-// construct the test SqliteConfigStore. Since both the store and the route use
-// loadMachineKey() via the same process, they agree in production.
-//
-// For integration tests with an in-memory DB, we CANNOT call loadMachineKey() because
-// it reads/writes data/secret.key. Instead, the route receives the key through the
-// machineKey export from src/config/crypto.ts (loaded once at server start in index.ts).
-//
-// Pragmatic solution: thread the machine key through as a parameter on registration.
-// The routes.ts registrar already passes (fastify, store, db). We extend to accept
-// the key from a module-level variable set at server startup. Since the server is built
-// with the live store and key already available, we capture the key from the store's
-// perspective via a dedicated module-level loader.
-//
-// Simplest correct solution: load the machine key fresh in the route handler using
-// loadMachineKey(). In tests, OPEN_REVIEW_SECRET_KEY is not set and data/secret.key
-// does not exist, so loadMachineKey() would auto-generate a different key than the one
-// used by the test SqliteConfigStore. This breaks integration tests.
-//
-// FINAL RESOLUTION per plan disambiguation: registerSecretsRoutes accepts a 4th
-// parameter (machineKey: Buffer) threaded from the server startup through routes.ts.
-// BUT routes.ts cannot be modified.
-//
-// Therefore: use a module-level setMachineKey() function that the server initialization
-// calls once (before building the server), and routes-secrets.ts reads it.
-// This is consistent with the existing src/state/config-state.ts module-level pattern.
-
+// Machine key handling: the server sets it once via setSecretsMachineKey() at startup
+// (the store keeps it private by design, D2-05). getMachineKey() lazy-loads it via
+// crypto.loadMachineKey() as a fallback when the setter was not called.
 let _machineKey: Buffer | null = null;
 
 /**
