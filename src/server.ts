@@ -67,10 +67,16 @@ export async function buildServer(
   if (machineKey) {
     setSecretsMachineKey(machineKey);
   }
-  // trustProxy: true -- required for secure:'auto' cookie behavior behind Caddy (D2-11, Pitfall 2).
+  // trustProxy scoped to loopback only -- required for secure:'auto' cookie behavior
+  // behind a same-host Caddy (D2-11, Pitfall 2) WITHOUT trusting an arbitrary
+  // client-supplied X-Forwarded-For (CR-01). With 'loopback', Fastify derives
+  // req.ip from X-Forwarded-For ONLY when the connection comes from 127.0.0.1/::1
+  // (the local reverse proxy); direct external connections keep their socket IP,
+  // so the per-IP login lockout cannot be reset by header rotation. A defense-in-depth
+  // global attempt ceiling in auth.ts backstops the case where no trusted proxy is present.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
   const fastify: FastifyApp = (_Fastify as unknown as (opts: Record<string, unknown>) => FastifyApp)(
-    { logger: false, trustProxy: true },
+    { logger: false, trustProxy: 'loopback' },
   );
 
   // Raw-body parser: capture the exact bytes GitHub signed.

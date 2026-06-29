@@ -26,6 +26,19 @@ type FastifyReply = any;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
+// Defense-in-depth global ceiling (CR-01, IN-04). The per-IP lockout above can be
+// evaded when the node is reachable directly (no trusted proxy overwriting
+// X-Forwarded-For), because an attacker rotates the client IP on every request and
+// no single key accumulates MAX_ATTEMPTS. This global counter is NOT keyed on any
+// client-derived value: once total failed attempts within the window cross the
+// ceiling, ALL further attempts are locked regardless of source IP. The ceiling is
+// set well above MAX_ATTEMPTS so a single legitimate operator's lockout-and-retry
+// cycle never trips it, while a header-rotating brute-forcer is still bounded.
+const GLOBAL_MAX_ATTEMPTS = 100;
+// Reserved key in lockoutMap so the global counter shares the map's lifecycle
+// (tests reset state via lockoutMap.clear(), which must also reset the global counter).
+const GLOBAL_KEY = '__global__';
+
 interface LockoutEntry {
   attempts: number;
   lockedUntil: number; // epoch ms; 0 = not locked
@@ -34,8 +47,31 @@ interface LockoutEntry {
 const lockoutMap = new Map<string, LockoutEntry>();
 
 function getClientIp(req: FastifyRequest): string {
-  // With trustProxy:true, Fastify sets req.ip from X-Forwarded-For.
+  // With trustProxy:'loopback', Fastify sets req.ip from X-Forwarded-For only when
+  // the immediate peer is the local reverse proxy (127.0.0.1/::1); otherwise req.ip
+  // is the real socket address, which a remote client cannot forge.
   return req.ip ?? 'unknown';
+}
+
+/** Returns true when the global (not IP-keyed) attempt ceiling is currently tripped. */
+function isGloballyLocked(): boolean {
+  const entry = lockoutMap.get(GLOBAL_KEY);
+  if (!entry || entry.lockedUntil === 0) return false;
+  if (Date.now() >= entry.lockedUntil) {
+    lockoutMap.delete(GLOBAL_KEY);
+    return false;
+  }
+  return true;
+}
+
+/** Record a failure against the global ceiling (independent of client IP). */
+function recordGlobalFailure(): void {
+  const entry = lockoutMap.get(GLOBAL_KEY) ?? { attempts: 0, lockedUntil: 0 };
+  entry.attempts += 1;
+  if (entry.attempts >= GLOBAL_MAX_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOCKOUT_WINDOW_MS;
+  }
+  lockoutMap.set(GLOBAL_KEY, entry);
 }
 
 function isLocked(ip: string): { locked: boolean; minutesLeft: number } {
@@ -90,7 +126,17 @@ export async function requireLogin(req: FastifyRequest, reply: FastifyReply): Pr
 export async function loginHandler(req: FastifyRequest, reply: FastifyReply): Promise<void> {
   const ip = getClientIp(req);
 
-  // Check lockout first.
+  // Check the global ceiling first (CR-01): backstops IP-rotation brute force when
+  // no trusted proxy is present. Not keyed on any client-derived value.
+  if (isGloballyLocked()) {
+    req.session.set(
+      'flashError',
+      'Too many failed attempts. Try again later.',
+    );
+    return reply.redirect('/login');
+  }
+
+  // Then the per-IP lockout.
   const lockoutStatus = isLocked(ip);
   if (lockoutStatus.locked) {
     req.session.set('flashError', `Too many failed attempts. Try again in ${lockoutStatus.minutesLeft} minutes.`);
@@ -116,6 +162,7 @@ export async function loginHandler(req: FastifyRequest, reply: FastifyReply): Pr
 
   if (!valid) {
     recordFailure(ip);
+    recordGlobalFailure();
     req.session.set('flashError', 'Incorrect password. Try again.');
     return reply.redirect('/login');
   }
