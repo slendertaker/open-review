@@ -3,7 +3,75 @@
     <span class="bracket-prefix">[+]</span>
     <h2 class="heading-md">General</h2>
   </div>
-  <div>
-    <!-- Wave 3 (Plan 03) replaces this body with the General settings fields. -->
-  </div>
+
+  <form
+    hx-post="/dashboard/settings/general"
+    hx-target="#general-section"
+    hx-swap="outerHTML"
+    style="max-width: 560px;"
+  >
+    <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+
+    <!-- Minimum severity -->
+    <div class="field-row">
+      <label for="minSeverity" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Minimum severity</label>
+      <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">Findings below this level are not posted.</p>
+      <select id="minSeverity" name="minSeverity" class="text-input" style="width: 100%; max-width: 240px;">
+        <option value="low"<% if (it.minSeverity === 'low') { %> selected<% } %>>low</option>
+        <option value="medium"<% if (it.minSeverity === 'medium') { %> selected<% } %>>medium</option>
+        <option value="high"<% if (it.minSeverity === 'high') { %> selected<% } %>>high</option>
+        <option value="critical"<% if (it.minSeverity === 'critical') { %> selected<% } %>>critical</option>
+      </select>
+    </div>
+
+    <!-- Skip draft pull requests -->
+    <div class="field-row" style="margin-top: var(--spacing-md);">
+      <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+        <input
+          type="checkbox"
+          name="skipDrafts"
+          value="on"
+          <% if (it.skipDrafts) { %>checked<% } %>
+        >
+        <span class="body-md">Skip draft pull requests</span>
+      </label>
+      <p class="caption-md" style="color: var(--color-mute); margin: var(--spacing-xs) 0 0 0; padding-left: 20px;">Do not review pull requests marked as draft.</p>
+    </div>
+
+    <!-- Skip forked repositories -->
+    <div class="field-row" style="margin-top: var(--spacing-md);">
+      <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+        <input
+          type="checkbox"
+          name="skipForks"
+          value="on"
+          <% if (it.skipForks) { %>checked<% } %>
+        >
+        <span class="body-md">Skip forked repositories</span>
+      </label>
+      <p class="caption-md" style="color: var(--color-mute); margin: var(--spacing-xs) 0 0 0; padding-left: 20px;">Do not review pull requests from forks.</p>
+    </div>
+
+    <!-- Ignore path patterns -->
+    <div class="field-row" style="margin-top: var(--spacing-md);">
+      <label for="ignoreGlobs" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Ignore path patterns</label>
+      <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">One glob per line. Matched files are excluded from review.</p>
+      <textarea
+        id="ignoreGlobs"
+        name="ignoreGlobs"
+        class="text-input"
+        rows="4"
+        style="width: 100%; resize: vertical;"
+      ><%= it.ignoreGlobs %></textarea>
+    </div>
+
+    <!-- Save button + flash region -->
+    <div style="margin-top: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md);">
+      <button type="submit" class="btn-secondary">[ save ]</button>
+    </div>
+
+    <% if (it.flash) { %>
+    <%~ it.flash %>
+    <% } %>
+  </form>
 </section>
