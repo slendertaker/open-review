@@ -17,6 +17,7 @@ import { registerReposRoutes } from './routes-repos.js';
 import { registerProviderRoutes } from './routes-provider.js';
 import { registerSecretsRoutes } from './routes-secrets.js';
 import { registerAccessRoutes } from './routes-access.js';
+import { registerActivityRoutes } from './routes-activity.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,6 +31,7 @@ export async function registerDashboardRoutes(
   fastify: AnyFastify,
   store: ConfigStore,
   db: Database.Database,
+  enqueue: (prId: string, payload: string) => void = () => {},
 ): Promise<void> {
   // -------------------------------------------------------------------------
   // GET /login -- render login page
@@ -113,4 +115,5 @@ export async function registerDashboardRoutes(
   await registerProviderRoutes(fastify, store, db);
   await registerSecretsRoutes(fastify, store, db);
   await registerAccessRoutes(fastify, store, db);
+  await registerActivityRoutes(fastify, store, db, enqueue);
 }

@@ -1,0 +1,46 @@
+<nav class="nav-strip">
+  <span class="body-strong">Open Review</span>
+  <a href="/activity" class="body-md" style="color: var(--color-mute);">Activity</a>
+  <a href="/dashboard" class="body-md" style="color: var(--color-mute);">Settings</a>
+  <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+</nav>
+
+<main class="content-column">
+  <section id="detail-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+    <div class="section-header">
+      <span class="bracket-prefix">[~]</span>
+      <h2 class="heading-md">Review Detail</h2>
+    </div>
+
+    <div class="field-row" style="margin-top: var(--spacing-md);">
+      <p class="body-md"><strong>Repository:</strong> <%= it.run.owner %>/<%= it.run.repo %></p>
+      <p class="body-md"><strong>PR:</strong> #<%= it.run.pr_number %></p>
+      <p class="body-md"><strong>Status:</strong> <%= it.run.status %></p>
+      <p class="body-md"><strong>Mode:</strong> <%= it.run.mode %></p>
+      <p class="body-md"><strong>Findings:</strong> <%= it.run.finding_count %></p>
+      <% if (it.run.summary) { %>
+      <p class="body-md"><strong>Summary:</strong> <%= it.run.summary %></p>
+      <% } %>
+      <% if (it.run.error) { %>
+      <p class="body-md" style="color: var(--color-error);"><strong>Error:</strong> <%= it.run.error %></p>
+      <% } %>
+      <p class="caption-md" style="color: var(--color-mute);">Started: <%= it.run.started_at ?? it.run.created_at %></p>
+      <% if (it.run.finished_at) { %>
+      <p class="caption-md" style="color: var(--color-mute);">Finished: <%= it.run.finished_at %></p>
+      <% } %>
+    </div>
+
+    <div style="margin-top: var(--spacing-md);">
+      <form
+        hx-post="/activity/<%= it.run.id %>/retrigger"
+        hx-target="body"
+        hx-swap="none"
+        style="display: inline;"
+      >
+        <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+        <button type="submit" class="btn-secondary">[ re-trigger ]</button>
+      </form>
+      <a href="/activity" class="body-md" style="color: var(--color-mute); margin-left: var(--spacing-md);">Back to Activity</a>
+    </div>
+  </section>
+</main>

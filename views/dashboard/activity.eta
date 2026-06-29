@@ -1,0 +1,16 @@
+<nav class="nav-strip">
+  <span class="body-strong">Open Review</span>
+  <a href="/activity" class="body-md" style="color: var(--color-fg);">Activity</a>
+  <a href="/dashboard" class="body-md" style="color: var(--color-mute);">Settings</a>
+  <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+</nav>
+
+<main class="content-column">
+  <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+  <div id="activity-list"
+       hx-get="/activity/partial"
+       hx-trigger="every 5s"
+       hx-swap="outerHTML">
+    <%~ include('./partials/activity-list', it) %>
+  </div>
+</main>

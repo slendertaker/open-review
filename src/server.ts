@@ -250,7 +250,7 @@ export async function buildServer(
   // -------------------------------------------------------------------------
   // Authenticated dashboard routes (all gated by requireLogin in routes.ts)
   // -------------------------------------------------------------------------
-  await registerDashboardRoutes(fastify, store, db);
+  await registerDashboardRoutes(fastify, store, db, enqueue);
 
   return fastify;
 }
