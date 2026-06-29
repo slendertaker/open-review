@@ -89,13 +89,18 @@ export function loadMachineKey(): Buffer {
   // Priority 1: env override (installer / systemd EnvironmentFile path)
   const envHex = process.env['OPEN_REVIEW_SECRET_KEY'];
   if (envHex) {
-    const buf = Buffer.from(envHex, 'hex');
-    if (buf.length !== 32) {
+    // WR-04: Buffer.from(x, 'hex') silently stops at the first non-hex character
+    // and ignores trailing junk, so a stray newline or typo could yield a 32-byte
+    // buffer that is NOT the operator's intended key -- decryption then fails
+    // silently for every stored secret. Validate strictly before decoding and trim
+    // surrounding whitespace (the key-file path already trims at line 101).
+    const trimmed = envHex.trim();
+    if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) {
       throw new Error(
-        `OPEN_REVIEW_SECRET_KEY must be 64 hex chars (32 bytes); got ${buf.length} bytes (${envHex.length} hex chars)`,
+        'OPEN_REVIEW_SECRET_KEY must be exactly 64 hexadecimal characters (32 bytes)',
       );
     }
-    return buf;
+    return Buffer.from(trimmed, 'hex');
   }
 
   // Priority 2: key file on disk
