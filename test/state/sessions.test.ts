@@ -19,7 +19,9 @@ function createTestDb(): Database.Database {
   return db;
 }
 
-type SessionData = Record<string, unknown>;
+// Session data used in tests; cast to Session where the store interface requires it.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SessionData = any;
 type StoreCallback = (err: Error | null, session?: unknown) => void;
 
 /** Promisify a store callback for cleaner test assertions */

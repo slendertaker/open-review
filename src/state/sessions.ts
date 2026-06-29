@@ -13,9 +13,12 @@
  */
 
 import type Database from 'better-sqlite3';
+import type { Session } from 'fastify';
 
 type Statement = Database.Statement<unknown[]>;
+// @fastify/session store callback types
 type SessionCallback = (err: Error | null, session?: unknown) => void;
+type FastifyCallback = (err?: Error | null | undefined) => void;
 
 export class SqliteSessionStore {
   private readonly stmtGet: Statement;
@@ -49,10 +52,10 @@ export class SqliteSessionStore {
   /**
    * Retrieve a session by ID. Passes undefined to the callback if not found or expired.
    */
-  get(id: string, callback: SessionCallback): void {
+  get(id: string, callback: (err: Error | null, session?: Session | null) => void): void {
     try {
       const row = this.stmtGet.get(id) as { data: string } | undefined;
-      callback(null, row ? (JSON.parse(row.data) as unknown) : undefined);
+      callback(null, row ? (JSON.parse(row.data) as Session) : undefined);
     } catch (err) {
       callback(err as Error);
     }
@@ -62,11 +65,11 @@ export class SqliteSessionStore {
    * Save (upsert) a session. TTL is derived from session.cookie.maxAge (ms),
    * defaulting to 24 hours when not present.
    */
-  set(id: string, session: Record<string, unknown>, callback: SessionCallback): void {
+  set(id: string, session: Session, callback: FastifyCallback): void {
     try {
-      const cookie = session['cookie'] as { maxAge?: number } | undefined;
-      const ttlSeconds = cookie?.maxAge != null
-        ? Math.floor(cookie.maxAge / 1000)
+      const cookieInfo = (session as unknown as Record<string, unknown>)['cookie'] as { maxAge?: number } | undefined;
+      const ttlSeconds = cookieInfo?.maxAge != null
+        ? Math.floor(cookieInfo.maxAge / 1000)
         : 86400; // 24 h default
       this.stmtSet.run(id, JSON.stringify(session), String(ttlSeconds));
       callback(null);
@@ -78,7 +81,7 @@ export class SqliteSessionStore {
   /**
    * Destroy a session by ID. No-op if not present.
    */
-  destroy(id: string, callback: SessionCallback): void {
+  destroy(id: string, callback: FastifyCallback): void {
     try {
       this.stmtDestroy.run(id);
       callback(null);
