@@ -32,6 +32,15 @@
       <span class="caption-md" style="color: var(--color-mute);">mode: <%= row.mode %></span>
       <span class="caption-md" style="color: var(--color-mute);">findings: <%= row.finding_count %></span>
       <span class="caption-md" style="color: var(--color-mute);"><%= row.finished_at ? row.finished_at : row.created_at %></span>
+      <form
+        hx-post="/activity/<%= row.id %>/retrigger"
+        hx-target="#activity-list"
+        hx-swap="outerHTML"
+        style="display: inline;"
+      >
+        <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+        <button type="submit" class="btn-secondary" style="font-size: 0.75rem; padding: 2px 6px;">[&gt;] Re-review</button>
+      </form>
     </div>
     <% } %>
   </div>
