@@ -83,6 +83,12 @@ export interface ConfigStore {
   readonly host: string;
   /** Diff ignore globs (git pathspec + picomatch). */
   readonly ignoreGlobs: string[];
+  /** Active AI provider (D2-12: 'claude' default; 'codex' present-but-disabled). */
+  readonly provider: string;
+  /** Dashboard domain for TLS and CSRF origin check (D2-11, D2-08). */
+  readonly domain: string | undefined;
+  /** Session secret for @fastify/session (D2-07). */
+  readonly sessionSecret: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +143,9 @@ export class EnvConfigStore implements ConfigStore {
   readonly port: number;
   readonly host: string;
   readonly ignoreGlobs: string[];
+  readonly provider: string;
+  readonly domain: string | undefined;
+  readonly sessionSecret: string;
 
   constructor() {
     // Accept OPEN_REVIEW_WEBHOOK_SECRET or WEBHOOK_SECRET (legacy compatibility).
@@ -184,5 +193,10 @@ export class EnvConfigStore implements ConfigStore {
     this.ignoreGlobs = globEnv
       ? globEnv.split(',').map((g) => g.trim()).filter(Boolean)
       : DEFAULT_IGNORE_GLOBS;
+
+    // Phase 2 fields: provider, domain, sessionSecret (D2-12, D2-11, D2-07).
+    this.provider = readEnv('OPEN_REVIEW_PROVIDER') ?? 'claude';
+    this.domain = readEnv('OPEN_REVIEW_DOMAIN');
+    this.sessionSecret = readEnv('OPEN_REVIEW_SESSION_SECRET') ?? '';
   }
 }
