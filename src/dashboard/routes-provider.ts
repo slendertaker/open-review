@@ -76,6 +76,11 @@ function buildProviderViewData(store: ConfigStore): Record<string, unknown> {
     provider: store.provider,
     claudeOauthTokenPreview: oauthToken ? maskSecret(oauthToken) : null,
     anthropicApiKeyPreview: apiKey ? maskSecret(apiKey, 'sk-ant-') : null,
+    // IN-01: also supply the presence booleans the partial falls back to, so the
+    // POST re-render and the dashboard GET render (routes.ts) feed the template the
+    // same key set rather than diverging.
+    hasClaudeOauthToken: !!oauthToken,
+    hasAnthropicApiKey: !!apiKey,
     flash: '',
   };
 }
