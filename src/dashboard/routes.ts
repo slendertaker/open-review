@@ -61,10 +61,12 @@ export async function registerDashboardRoutes(
 
   // -------------------------------------------------------------------------
   // POST /login -- authenticate
+  // CSRF protection runs as preHandler (not onRequest): the _csrf token is in
+  // the form body, which is only parsed at preHandler time (see setup.ts note).
   // -------------------------------------------------------------------------
   fastify.post(
     '/login',
-    { onRequest: fastify.csrfProtection },
+    { preHandler: fastify.csrfProtection },
     loginHandler,
   );
 

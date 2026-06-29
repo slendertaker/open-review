@@ -65,6 +65,16 @@ export async function registerSetupRoutes(
   fastify.addHook('onRequest', async (req: Req, reply: Rep) => {
     // Exempt routes that are always accessible regardless of auth state.
     const url = req.url.split('?')[0] ?? '';
+
+    const passwordSet = !!getSetting('password_hash');
+
+    // When a password is already set, /setup is closed: redirect to /login.
+    // This runs in onRequest, BEFORE the route's CSRF protection, so a stale
+    // POST /setup after password set cleanly redirects rather than 403ing.
+    if (passwordSet && url === '/setup') {
+      return reply.redirect('/login');
+    }
+
     const isExempt =
       url === '/setup' ||
       url === '/login' ||
@@ -76,7 +86,7 @@ export async function registerSetupRoutes(
     if (isExempt) return;
 
     // If no password is set, redirect all gated routes to /setup.
-    if (!getSetting('password_hash')) {
+    if (!passwordSet) {
       return reply.redirect('/setup');
     }
   });
@@ -119,9 +129,13 @@ export async function registerSetupRoutes(
   // -------------------------------------------------------------------------
   // POST /setup -- validate token, set password, create session
   // -------------------------------------------------------------------------
+  // CSRF protection runs as preHandler (NOT onRequest): the _csrf token lives in
+  // the form body, and req.body is only parsed at the preValidation/preHandler
+  // phase. At onRequest the body is undefined, so token verification would always
+  // fail (Rule 1 fix vs RESEARCH.md's header-token onRequest example).
   fastify.post(
     '/setup',
-    { onRequest: fastify.csrfProtection },
+    { preHandler: fastify.csrfProtection },
     async (req: Req, reply: Rep) => {
       // If password already set, redirect to /login.
       if (getSetting('password_hash')) {

@@ -1,0 +1,38 @@
+<div class="centered-card-wrapper">
+  <div class="centered-card">
+    <h1 class="display-xl">Set up Open Review</h1>
+    <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-sm);">Create a password to protect the dashboard.</p>
+
+    <% if (it.tokenValid) { %>
+      <div style="margin-top: var(--spacing-section);">
+        <form method="POST" action="/setup">
+          <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+          <input type="hidden" name="token" value="<%= it.token %>">
+
+          <div>
+            <label for="password" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">New password</label>
+            <input type="password" id="password" name="password" class="text-input" autocomplete="new-password" required>
+            <p class="caption-md" style="color: var(--color-mute); margin-top: var(--spacing-xs);">Minimum 12 characters.</p>
+          </div>
+
+          <div style="margin-top: var(--spacing-md);">
+            <label for="confirm" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Confirm password</label>
+            <input type="password" id="confirm" name="confirm" class="text-input" autocomplete="new-password" required>
+          </div>
+
+          <div style="margin-top: var(--spacing-md);">
+            <button type="submit" class="btn-primary" style="width: 100%;">Set password</button>
+          </div>
+
+          <% if (it.error) { %>
+            <p class="flash-error" role="alert">[x] <%= it.error %></p>
+          <% } %>
+        </form>
+      </div>
+    <% } else { %>
+      <div style="margin-top: var(--spacing-section);">
+        <p class="flash-error" role="alert">[x] This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
+      </div>
+    <% } %>
+  </div>
+</div>

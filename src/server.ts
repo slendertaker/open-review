@@ -28,6 +28,7 @@ type FastifyApp = any;
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import fastifyCsrf from '@fastify/csrf-protection';
+import fastifyFormbody from '@fastify/formbody';
 import fastifyView from '@fastify/view';
 import { Eta } from 'eta';
 import fastifyStatic from '@fastify/static';
@@ -77,9 +78,15 @@ export async function buildServer(
   );
 
   // -------------------------------------------------------------------------
-  // Plugin registration order: cookie -> session -> csrf -> view -> static
+  // Plugin registration order: formbody -> cookie -> session -> csrf -> view -> static
   // (RESEARCH.md Pitfall 1 -- each plugin depends on the previous)
+  // formbody must register before routes so application/x-www-form-urlencoded
+  // bodies are parsed and req.body._csrf is available to CSRF protection.
+  // The /webhook content-type parser (application/json, buffer) is unaffected.
   // -------------------------------------------------------------------------
+
+  // 0. Form body parser (parses dashboard HTML form POSTs into req.body)
+  await fastify.register(fastifyFormbody);
 
   // 1. Cookie plugin (required before session)
   await fastify.register(fastifyCookie);
