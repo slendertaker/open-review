@@ -19,7 +19,7 @@
 import argon2 from 'argon2';
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
-import { getSetting, setSetting } from '../state/config-state.js';
+import { getSetting, setSetting, deleteSetting } from '../state/config-state.js';
 import { deleteAllSessionsExcept } from '../state/sessions.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
@@ -149,23 +149,11 @@ export async function registerAccessRoutes(
         }
       }
 
-      // Persist: empty value stored as empty string; store.domain returns undefined
-      // for empty/missing (bare getter in SqliteConfigStore returns undefined when
-      // the setting is missing or empty).
+      // Persist. Empty input clears the domain by DELETING the row (WR-07), so
+      // store.domain is undefined because the row is absent -- no reliance on the
+      // getter's empty-string sentinel.
       if (rawDomain === '') {
-        // Clear: remove the row by setting to empty string; the getter returns
-        // undefined for falsy values in the store (domain getter: `return readSetting('domain')`
-        // which returns undefined when not present). We need to store '' and the
-        // getter will return ''. To make store.domain === undefined we delete by
-        // overwriting with an empty string that the getter passes through -- but
-        // the SqliteConfigStore.domain getter does:
-        //   return this.readSetting('domain');
-        // which returns undefined only when the row is absent, not when it is ''.
-        // So we must not write a row at all. Use a sentinel: store nothing.
-        // better-sqlite3 does not have a deleteRow helper in config-state, so we
-        // set to the empty string and document that domain === '' means IP-only.
-        // The no-domain banner checks `!store.domain` which is also true for ''.
-        setSetting('domain', '');
+        deleteSetting('domain');
       } else {
         setSetting('domain', rawDomain);
       }

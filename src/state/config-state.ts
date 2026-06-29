@@ -14,6 +14,7 @@ type Statement = Database.Statement<unknown[]>;
 
 let stmtGetSetting: Statement | null = null;
 let stmtSetSetting: Statement | null = null;
+let stmtDeleteSetting: Statement | null = null;
 let stmtGetSecret: Statement | null = null;
 let stmtSetSecret: Statement | null = null;
 let stmtDeleteSecret: Statement | null = null;
@@ -29,6 +30,7 @@ export function initConfig(db: Database.Database): void {
   stmtSetSetting = db.prepare(
     'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
   );
+  stmtDeleteSetting = db.prepare('DELETE FROM settings WHERE key = ?');
   stmtGetSecret = db.prepare('SELECT encrypted FROM secrets WHERE name = ?');
   stmtSetSecret = db.prepare(
     "INSERT OR REPLACE INTO secrets (name, encrypted, updated_at) VALUES (?, ?, datetime('now'))",
@@ -56,6 +58,14 @@ export function setSetting(key: string, value: string): void {
     throw new Error('config not initialised -- call openDb() before setSetting()');
   }
   stmtSetSetting.run(key, value);
+}
+
+/** Delete a setting row by key. No-op if the key is not present. */
+export function deleteSetting(key: string): void {
+  if (!stmtDeleteSetting) {
+    throw new Error('config not initialised -- call openDb() before deleteSetting()');
+  }
+  stmtDeleteSetting.run(key);
 }
 
 /** Read the raw encrypted record for a secret by name. Returns undefined if not present. */
