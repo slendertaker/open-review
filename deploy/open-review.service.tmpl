@@ -1,0 +1,44 @@
+[Unit]
+Description=Open Review (GitHub PR reviewer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=open-review
+Group=open-review
+WorkingDirectory=/opt/open-review
+# HOME must be set so os.homedir() (bare-clone cache path) and the claude subprocess
+# inherit the same value. Without this systemd may not set HOME for a system service.
+Environment=HOME=/opt/open-review
+Environment=USER=open-review
+# NODE_OPTIONS is set here because ExecStart calls node directly, not npm start.
+# The npm start script's NODE_OPTIONS does not apply when node is invoked directly.
+Environment=NODE_OPTIONS=--max-old-space-size=384
+# node_modules/.bin must come first so the pinned @anthropic-ai/claude-code binary
+# resolves for both assertClaudeVersion at startup and the worker subprocess.
+Environment=PATH=/opt/open-review/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+EnvironmentFile=/etc/open-review/open-review.env
+ExecStart=/usr/bin/node dist/src/index.js
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+TimeoutStopSec=20
+
+# Resource bounds (DEPL-04) -- these are starting points, tune at live-VPS verify.
+# OOMPolicy=continue keeps the service alive when one large review OOM-kills the claude subprocess.
+MemoryHigh=1200M
+MemoryMax=1536M
+TasksMax=512
+OOMPolicy=continue
+
+# Hardening (D4-02) -- ReadWritePaths must cover both the SQLite data dir and the
+# bare-clone cache parent (.open-review) or boot/clone fails under ProtectSystem=strict.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/open-review/data /opt/open-review/.open-review
+
+[Install]
+WantedBy=multi-user.target

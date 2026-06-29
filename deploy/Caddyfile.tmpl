@@ -1,0 +1,20 @@
+# Caddyfile template for Open Review.
+# Rendered by install.sh based on whether OPEN_REVIEW_DOMAIN is set.
+# The Caddy admin API stays at the default localhost:2019 -- it must never be
+# bound to a public interface.
+
+# --- Domain mode (ACME HTTPS) ---
+# Used when OPEN_REVIEW_DOMAIN is set. Caddy automatically provisions and
+# renews a TLS certificate via ACME (Let's Encrypt / ZeroSSL) and redirects
+# HTTP to HTTPS.
+#
+# {$OPEN_REVIEW_DOMAIN} {
+#     reverse_proxy 127.0.0.1:{$OPEN_REVIEW_PORT:3000}
+# }
+
+# --- IP-only mode (plain HTTP) ---
+# Used when no domain is set. Plain HTTP on port 80 to the public IP.
+# Enter a domain in the dashboard settings to switch to HTTPS at any time.
+:80 {
+    reverse_proxy 127.0.0.1:{$OPEN_REVIEW_PORT:3000}
+}
