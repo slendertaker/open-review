@@ -1,0 +1,19 @@
+<nav class="nav-strip">
+  <span class="body-strong">Open Review</span>
+  <a href="/activity" class="body-md" style="color: var(--color-mute);">Activity</a>
+  <a href="/dashboard" class="body-md" style="color: var(--color-mute);">Settings</a>
+  <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+</nav>
+
+<main class="content-column">
+  <section style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl);">
+    <div class="section-header">
+      <span class="bracket-prefix">[x]</span>
+      <h2 class="heading-md"><%= it.heading %></h2>
+    </div>
+    <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-md);"><%= it.message %></p>
+    <p class="body-md" style="margin-top: var(--spacing-lg);">
+      <a href="/activity" style="color: var(--color-fg);">Back to Activity</a>
+    </p>
+  </section>
+</main>

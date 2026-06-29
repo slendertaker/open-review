@@ -75,13 +75,23 @@ export async function registerActivityRoutes(
   fastify.get('/activity/:id', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
     const rawId = (req.params as Record<string, string>)['id'];
     const id = parseInt(rawId ?? '', 10);
+    // WR-06: this route is reached by following an <a href> in a browser, so
+    // errors must render an HTML dashboard page rather than a raw JSON blob.
     if (!Number.isFinite(id) || id <= 0) {
-      return reply.code(400).send({ error: 'Invalid review run id.' });
+      return reply.code(400).viewAsync('dashboard/error', {
+        title: 'Bad request - Open Review',
+        heading: 'Bad request',
+        message: 'Invalid review run id.',
+      }, { layout: 'layout.eta' });
     }
 
     const run = getReviewRunById(id);
     if (!run) {
-      return reply.code(404).send({ error: 'Review run not found.' });
+      return reply.code(404).viewAsync('dashboard/error', {
+        title: 'Not found - Open Review',
+        heading: 'Not found',
+        message: 'Review run not found.',
+      }, { layout: 'layout.eta' });
     }
 
     // Parse findings_json in the handler (T-03-05: prevent XSS by rendering

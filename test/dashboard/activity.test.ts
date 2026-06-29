@@ -248,6 +248,9 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     });
 
     expect(res.statusCode).toBe(400);
+    // WR-06: HTML error page, not a JSON blob
+    expect(res.body as string).toContain('<html');
+    expect(res.body as string).not.toContain('{"error"');
   });
 
   // Detail 404 on unknown id
@@ -261,6 +264,9 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     });
 
     expect(res.statusCode).toBe(404);
+    // WR-06: HTML error page, not a JSON blob
+    expect(res.body as string).toContain('<html');
+    expect(res.body as string).not.toContain('{"error"');
   });
 
   // -------------------------------------------------------------------------
