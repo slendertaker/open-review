@@ -8,29 +8,105 @@
 <main class="content-column">
   <section id="detail-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
     <div class="section-header">
-      <span class="bracket-prefix">[~]</span>
-      <h2 class="heading-md">Review Detail</h2>
+      <%
+        let marker = '[?]';
+        let statusClass = 'status-unknown';
+        if (it.run.status === 'running')      { marker = '[~]'; statusClass = 'status-running'; }
+        else if (it.run.status === 'success') { marker = '[+]'; statusClass = 'status-success'; }
+        else if (it.run.status === 'failed')  { marker = '[x]'; statusClass = 'status-failed'; }
+        else if (it.run.status === 'rate_limited') { marker = '[!]'; statusClass = 'status-warning'; }
+      %>
+      <span class="bracket-prefix <%= statusClass %>" style="font-family: monospace;"><%= marker %></span>
+      <h2 class="heading-md">Review #<%= it.run.id %>: <%= it.run.owner %>/<%= it.run.repo %> #<%= it.run.pr_number %></h2>
     </div>
 
+    <!-- Status and mode -->
     <div class="field-row" style="margin-top: var(--spacing-md);">
-      <p class="body-md"><strong>Repository:</strong> <%= it.run.owner %>/<%= it.run.repo %></p>
-      <p class="body-md"><strong>PR:</strong> #<%= it.run.pr_number %></p>
       <p class="body-md"><strong>Status:</strong> <%= it.run.status %></p>
       <p class="body-md"><strong>Mode:</strong> <%= it.run.mode %></p>
-      <p class="body-md"><strong>Findings:</strong> <%= it.run.finding_count %></p>
-      <% if (it.run.summary) { %>
-      <p class="body-md"><strong>Summary:</strong> <%= it.run.summary %></p>
+      <p class="body-md"><strong>Provider:</strong> <%= it.run.provider %></p>
+    </div>
+
+    <!-- Timing -->
+    <div class="field-row" style="margin-top: var(--spacing-md);">
+      <p class="caption-md" style="color: var(--color-mute);">Created: <%= it.run.created_at %></p>
+      <% if (it.run.started_at) { %>
+      <p class="caption-md" style="color: var(--color-mute);">Started: <%= it.run.started_at %></p>
       <% } %>
-      <% if (it.run.error) { %>
-      <p class="body-md" style="color: var(--color-error);"><strong>Error:</strong> <%= it.run.error %></p>
-      <% } %>
-      <p class="caption-md" style="color: var(--color-mute);">Started: <%= it.run.started_at ?? it.run.created_at %></p>
       <% if (it.run.finished_at) { %>
       <p class="caption-md" style="color: var(--color-mute);">Finished: <%= it.run.finished_at %></p>
       <% } %>
+      <p class="caption-md" style="color: var(--color-mute);">
+        Duration: <% if (it.run.duration_ms !== null && it.run.duration_ms !== undefined) { %><%= it.run.duration_ms %> ms<% } else { %>-- ms<% } %>
+      </p>
     </div>
 
-    <div style="margin-top: var(--spacing-md);">
+    <!-- Summary -->
+    <% if (it.run.summary) { %>
+    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface-soft); border-radius: var(--rounded-sm);">
+      <p class="body-md"><strong>Summary:</strong></p>
+      <p class="body-md" style="margin-top: var(--spacing-xs);"><%= it.run.summary %></p>
+    </div>
+    <% } %>
+
+    <!-- Findings -->
+    <div style="margin-top: var(--spacing-lg);">
+      <div class="section-header">
+        <span class="bracket-prefix">[~]</span>
+        <h3 class="heading-md">Findings (<%= it.run.finding_count %>)</h3>
+      </div>
+      <% if (!it.findings || it.findings.length === 0) { %>
+      <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-md);">No findings.</p>
+      <% } else { %>
+      <div style="margin-top: var(--spacing-md); border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm); overflow: hidden;">
+        <% for (const finding of it.findings) { %>
+        <%
+          let severityClass = 'status-unknown';
+          let sevMarker = '[?]';
+          if (finding.severity === 'critical') { severityClass = 'status-failed'; sevMarker = '[!]'; }
+          else if (finding.severity === 'high') { severityClass = 'status-failed'; sevMarker = '[x]'; }
+          else if (finding.severity === 'medium') { severityClass = 'status-warning'; sevMarker = '[~]'; }
+          else if (finding.severity === 'low') { severityClass = 'status-running'; sevMarker = '[i]'; }
+        %>
+        <div style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-hairline);">
+          <div style="display: flex; align-items: baseline; gap: var(--spacing-md);">
+            <span class="bracket-prefix <%= severityClass %>" style="font-family: monospace; min-width: 3ch;"><%= sevMarker %></span>
+            <span class="caption-md" style="color: var(--color-mute);"><%= finding.severity %></span>
+            <span class="body-md" style="font-family: monospace; color: var(--color-mute);">
+              <%= finding.file %>:<%= finding.line %>
+            </span>
+          </div>
+          <p class="body-md" style="margin-top: var(--spacing-xs); padding-left: calc(3ch + var(--spacing-md));"><%= finding.message %></p>
+        </div>
+        <% } %>
+      </div>
+      <% } %>
+    </div>
+
+    <!-- Error (if any) -->
+    <% if (it.run.error) { %>
+    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface-soft); border-radius: var(--rounded-sm);">
+      <p class="body-md" style="color: var(--color-error);"><strong>Error:</strong></p>
+      <p class="body-md" style="margin-top: var(--spacing-xs); color: var(--color-error);"><%= it.run.error %></p>
+    </div>
+    <% } %>
+
+    <!-- Captured log -->
+    <% if (it.run.log) { %>
+    <div style="margin-top: var(--spacing-lg);" x-data="{ expanded: false }">
+      <div class="section-header" style="cursor: pointer;" @click="expanded = !expanded">
+        <span class="bracket-prefix">[~]</span>
+        <h3 class="heading-md">Captured log</h3>
+        <span class="caption-md" style="color: var(--color-mute);" x-text="expanded ? '[ collapse ]' : '[ expand ]'"></span>
+      </div>
+      <div x-show="expanded" style="margin-top: var(--spacing-md);">
+        <pre class="body-md" style="font-family: monospace; background: var(--color-surface-dark); color: var(--color-canvas); padding: var(--spacing-md); border-radius: var(--rounded-sm); overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"><%= it.run.log %></pre>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Actions -->
+    <div style="margin-top: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-md);">
       <form
         hx-post="/activity/<%= it.run.id %>/retrigger"
         hx-target="body"
@@ -40,7 +116,7 @@
         <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
         <button type="submit" class="btn-secondary">[ re-trigger ]</button>
       </form>
-      <a href="/activity" class="body-md" style="color: var(--color-mute); margin-left: var(--spacing-md);">Back to Activity</a>
+      <a href="/activity" class="body-md" style="color: var(--color-mute);">Back to Activity</a>
     </div>
   </section>
 </main>

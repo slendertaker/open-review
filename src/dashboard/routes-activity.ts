@@ -12,6 +12,7 @@ import {
   getReviewRunPage,
   getReviewRunById,
 } from '../state/review-runs.js';
+import { computeHealthData } from './health.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -24,8 +25,8 @@ const PAGE_SIZE = 50;
 
 export async function registerActivityRoutes(
   fastify: AnyFastify,
-  _store: ConfigStore,
-  _db: Database.Database,
+  store: ConfigStore,
+  db: Database.Database,
   _enqueue: (prId: string, payload: string) => void,
 ): Promise<void> {
   // -------------------------------------------------------------------------
@@ -37,6 +38,7 @@ export async function registerActivityRoutes(
     if (!Number.isFinite(page) || page < 0) page = 0;
 
     const rows = getReviewRunPage(PAGE_SIZE, page * PAGE_SIZE);
+    const health = await computeHealthData(db, store);
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/activity', {
@@ -45,15 +47,17 @@ export async function registerActivityRoutes(
       rows,
       page,
       pageSize: PAGE_SIZE,
+      health,
     });
   });
 
   // -------------------------------------------------------------------------
   // GET /activity/partial -- htmx partial (T-03-04: requires login)
-  // Returns the feed rows partial for 5s polling swaps.
+  // Returns the feed rows partial + OOB health panel for 5s polling swaps.
   // -------------------------------------------------------------------------
   fastify.get('/activity/partial', { preHandler: requireLogin }, async (_req: Req, reply: Rep) => {
     const rows = getReviewRunPage(PAGE_SIZE, 0);
+    const health = await computeHealthData(db, store);
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/partials/activity-list', {
@@ -61,6 +65,7 @@ export async function registerActivityRoutes(
       page: 0,
       pageSize: PAGE_SIZE,
       csrfToken,
+      health,
     });
   });
 
@@ -79,12 +84,22 @@ export async function registerActivityRoutes(
       return reply.code(404).send({ error: 'Review run not found.' });
     }
 
+    // Parse findings_json in the handler (T-03-05: prevent XSS by rendering
+    // individual fields via auto-escaped <%= %> instead of raw JSON string).
+    let findings: Array<{ file: string; line: number; severity: string; message: string }> = [];
+    try {
+      findings = JSON.parse(run.findings_json) as typeof findings;
+    } catch {
+      findings = [];
+    }
+
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/activity-detail', {
-      title: `Activity #${id} - Open Review`,
+      title: `Review #${run.id} - Open Review`,
       csrfToken,
       run,
+      findings,
     });
   });
 
