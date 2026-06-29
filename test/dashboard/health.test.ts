@@ -82,17 +82,18 @@ describe('Health aggregation partial (DACT-03)', () => {
     const cookie = await login();
 
     // Insert job_queue rows directly: 2 pending, 1 running
+    // Note: job_queue schema has created_at but no updated_at column.
     db.prepare(
-      `INSERT INTO job_queue (pr_id, payload, status, created_at, updated_at)
-       VALUES (?, ?, ?, datetime('now'), datetime('now'))`
+      `INSERT INTO job_queue (pr_id, payload, status, created_at)
+       VALUES (?, ?, ?, datetime('now'))`
     ).run('owner/repo#1', '{}', 'pending');
     db.prepare(
-      `INSERT INTO job_queue (pr_id, payload, status, created_at, updated_at)
-       VALUES (?, ?, ?, datetime('now'), datetime('now'))`
+      `INSERT INTO job_queue (pr_id, payload, status, created_at)
+       VALUES (?, ?, ?, datetime('now'))`
     ).run('owner/repo#2', '{}', 'pending');
     db.prepare(
-      `INSERT INTO job_queue (pr_id, payload, status, created_at, updated_at)
-       VALUES (?, ?, ?, datetime('now'), datetime('now'))`
+      `INSERT INTO job_queue (pr_id, payload, status, created_at)
+       VALUES (?, ?, ?, datetime('now'))`
     ).run('owner/repo#3', '{}', 'running');
 
     const res = await server.inject({
