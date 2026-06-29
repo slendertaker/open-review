@@ -51,7 +51,7 @@ const log = buildLogger(process.env['OPEN_REVIEW_LOG_LEVEL'] ?? 'info');
  * disturb the SC5 worktree cleanup guarantee.
  */
 export async function runReview(job: JobPayload, config: ConfigStore): Promise<JobResult> {
-  const provider = getProvider();
+  const provider = getProvider(config.provider);
 
   // Step 1: Resolve GitHub auth.
   let githubToken: string;

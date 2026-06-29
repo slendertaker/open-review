@@ -3,7 +3,75 @@
     <span class="bracket-prefix">[+]</span>
     <h2 class="heading-md">Provider</h2>
   </div>
-  <div>
-    <!-- Wave 3 (Plan 04) replaces this body with the provider selector and secrets. -->
+
+  <form
+    hx-post="/dashboard/settings/provider"
+    hx-target="#provider-section"
+    hx-swap="outerHTML"
+    style="max-width: 560px;"
+  >
+    <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+
+    <!-- Claude Code (active) -->
+    <div class="field-row" style="margin-bottom: var(--spacing-md);">
+      <label style="display: flex; align-items: flex-start; gap: var(--spacing-xs); cursor: pointer;">
+        <input type="radio" name="provider" value="claude" checked style="margin-top: 4px;">
+        <span>
+          <span class="body-strong" style="display: block;">Claude Code</span>
+          <span class="caption-md" style="color: var(--color-mute);">Active provider.</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- OpenAI Codex (disabled) -->
+    <div class="field-row" style="margin-bottom: var(--spacing-md);">
+      <label style="display: flex; align-items: flex-start; gap: var(--spacing-xs); cursor: default;">
+        <input type="radio" name="provider" value="codex" disabled style="margin-top: 4px; cursor: default;">
+        <span>
+          <span class="body-md" style="color: var(--color-ash); display: inline;">OpenAI Codex</span>
+          <span style="background: var(--color-surface-card); color: var(--color-mute); font-size: 14px; padding: 2px 8px; border-radius: 4px; margin-left: var(--spacing-xs);">[not available yet]</span>
+          <span class="caption-md" style="color: var(--color-ash); display: block; margin-top: var(--spacing-xs);">Coming in a future release.</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- Save button + flash region -->
+    <div style="margin-top: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md);">
+      <button type="submit" class="btn-secondary">[ save ]</button>
+    </div>
+
+    <% if (it.flash) { %>
+    <%~ it.flash %>
+    <% } %>
+  </form>
+
+  <!-- Claude provider secret fields (write-only, D2-06) -->
+  <div style="margin-top: var(--spacing-xl); max-width: 560px;">
+    <p class="body-md" style="font-weight: 700; margin-bottom: var(--spacing-md);">Claude credentials</p>
+    <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-md) 0;">Manage Claude credentials in the Secrets section below.</p>
+
+    <!-- Claude OAuth token presence indicator -->
+    <div class="field-row" style="margin-bottom: var(--spacing-sm);">
+      <span class="body-md" style="color: var(--color-ink);">Claude OAuth token:</span>
+      <% if (it.claudeOauthTokenPreview) { %>
+      <span class="caption-md secret-preview" style="margin-left: var(--spacing-xs);" aria-label="Masked preview"><%= it.claudeOauthTokenPreview %></span>
+      <% } else if (it.hasClaudeOauthToken) { %>
+      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(set)</span>
+      <% } else { %>
+      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(not set)</span>
+      <% } %>
+    </div>
+
+    <!-- Anthropic API key presence indicator -->
+    <div class="field-row" style="margin-bottom: var(--spacing-sm);">
+      <span class="body-md" style="color: var(--color-ink);">Anthropic API key:</span>
+      <% if (it.anthropicApiKeyPreview) { %>
+      <span class="caption-md secret-preview" style="margin-left: var(--spacing-xs);" aria-label="Masked preview"><%= it.anthropicApiKeyPreview %></span>
+      <% } else if (it.hasAnthropicApiKey) { %>
+      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(set)</span>
+      <% } else { %>
+      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(not set)</span>
+      <% } %>
+    </div>
   </div>
 </section>
