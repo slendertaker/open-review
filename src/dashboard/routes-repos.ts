@@ -30,14 +30,15 @@ type Req = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rep = any;
 
-/** Validate owner/repo format: exactly one slash, non-empty owner and repo. */
+/**
+ * Validate owner/repo against GitHub's actual name rules (WR-05).
+ * Both halves may contain only [A-Za-z0-9_.-] and must not begin with '.' or '-'.
+ * This rejects interior spaces, shell metacharacters, and leading-dash names that
+ * the old single-slash check accepted, preventing silent dead config and tightening
+ * the trust boundary.
+ */
 function isValidRepo(value: string): boolean {
-  const parts = value.trim().split('/');
-  return (
-    parts.length === 2 &&
-    parts[0]!.length > 0 &&
-    parts[1]!.length > 0
-  );
+  return /^[A-Za-z0-9_][A-Za-z0-9_.-]*\/[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(value.trim());
 }
 
 /** Persist the repos array to the settings table as a JSON array. */
