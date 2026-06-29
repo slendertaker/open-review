@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= it.title ?? 'Open Review' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* -----------------------------------------------------------------------
+     * OpenCode monospace design system (BRND-01, DESIGN.md, D2-14)
+     * CSS variables declared here are the single source of truth for all
+     * dashboard templates. Do not override in child templates.
+     * ----------------------------------------------------------------------- */
+
+    :root {
+      /* Surface */
+      --color-canvas:          #fdfcfc;
+      --color-surface-soft:    #f8f7f7;
+      --color-surface-card:    #f1eeee;
+      --color-surface-dark:    #201d1d;
+
+      /* Text */
+      --color-ink:             #201d1d;
+      --color-ink-deep:        #0f0000;
+      --color-charcoal:        #302c2c;
+      --color-body:            #424245;
+      --color-mute:            #646262;
+      --color-ash:             #9a9898;
+
+      /* Structure */
+      --color-hairline:        rgba(15, 0, 0, 0.12);
+      --color-hairline-strong: #646262;
+
+      /* Semantic */
+      --color-success:         #30d158;
+      --color-danger:          #ff3b30;
+      --color-warning:         #ff9f0a;
+      --color-accent:          #007aff;
+
+      /* Spacing scale */
+      --spacing-xxs:     1px;
+      --spacing-xs:      4px;
+      --spacing-sm:      8px;
+      --spacing-md:      12px;
+      --spacing-lg:      16px;
+      --spacing-xl:      24px;
+      --spacing-xxl:     32px;
+      --spacing-section: 96px;
+
+      /* Border radius */
+      --rounded-sm: 4px;
+    }
+
+    /* -----------------------------------------------------------------------
+     * Global reset and typography
+     * ----------------------------------------------------------------------- */
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    a {
+      color: var(--color-ink);
+      text-decoration: underline;
+    }
+
+    a:hover {
+      color: var(--color-charcoal);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Typography utilities
+     * ----------------------------------------------------------------------- */
+
+    .display-xl {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .heading-md {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .body-md {
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .body-strong {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .button-md {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 2.0;
+    }
+
+    .caption-md {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 2.0;
+    }
+
+    /* -----------------------------------------------------------------------
+     * Button components
+     * ----------------------------------------------------------------------- */
+
+    .btn-primary {
+      display: inline-block;
+      background: var(--color-ink);
+      color: var(--color-canvas);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 2.0;
+      padding: 8px 20px;
+      border-radius: var(--rounded-sm);
+      border: none;
+      cursor: pointer;
+      min-height: 36px;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-charcoal);
+      color: var(--color-canvas);
+    }
+
+    .btn-primary:active {
+      background: var(--color-ink-deep);
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      background: var(--color-canvas);
+      color: var(--color-ink);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 2.0;
+      padding: 8px 20px;
+      border-radius: var(--rounded-sm);
+      border: 1px solid var(--color-hairline-strong);
+      cursor: pointer;
+      min-height: 36px;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-surface-soft);
+    }
+
+    .btn-disabled {
+      display: inline-block;
+      background: var(--color-surface-card);
+      color: var(--color-ash);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 2.0;
+      padding: 8px 20px;
+      border-radius: var(--rounded-sm);
+      border: none;
+      cursor: default;
+      min-height: 36px;
+    }
+
+    /* -----------------------------------------------------------------------
+     * Form components
+     * ----------------------------------------------------------------------- */
+
+    .text-input {
+      display: block;
+      width: 100%;
+      background: var(--color-surface-soft);
+      color: var(--color-ink);
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+      padding: 8px 12px;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--rounded-sm);
+      min-height: 40px;
+      outline: none;
+    }
+
+    .text-input::placeholder {
+      color: var(--color-ash);
+    }
+
+    .text-input:focus {
+      background: var(--color-canvas);
+      border-color: var(--color-ink);
+    }
+
+    textarea.text-input {
+      resize: vertical;
+    }
+
+    select.text-input {
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    /* -----------------------------------------------------------------------
+     * List row (repositories)
+     * ----------------------------------------------------------------------- */
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--color-hairline);
+      color: var(--color-body);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    /* -----------------------------------------------------------------------
+     * Flash messages
+     * ----------------------------------------------------------------------- */
+
+    .flash-success {
+      display: block;
+      color: var(--color-success);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 2.0;
+      margin-top: var(--spacing-sm);
+    }
+
+    .flash-error {
+      display: block;
+      color: var(--color-danger);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 2.0;
+      margin-top: var(--spacing-sm);
+    }
+
+    .flash-warning {
+      display: block;
+      color: var(--color-warning);
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 2.0;
+      margin-top: var(--spacing-sm);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Secret preview pill
+     * ----------------------------------------------------------------------- */
+
+    .secret-preview {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 2.0;
+      color: var(--color-ash);
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--color-surface-card);
+      border-radius: var(--rounded-sm);
+      font-family: inherit;
+    }
+
+    /* -----------------------------------------------------------------------
+     * Section header
+     * ----------------------------------------------------------------------- */
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .section-header .bracket-prefix {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--color-mute);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Nav strip
+     * ----------------------------------------------------------------------- */
+
+    .nav-strip {
+      height: 48px;
+      border-bottom: 1px solid var(--color-hairline);
+      background: var(--color-canvas);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--spacing-xl);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Content column
+     * ----------------------------------------------------------------------- */
+
+    .content-column {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--spacing-xxl) var(--spacing-xl);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Centered card (login / setup)
+     * ----------------------------------------------------------------------- */
+
+    .centered-card-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl);
+    }
+
+    .centered-card {
+      width: 100%;
+      max-width: 400px;
+      padding: var(--spacing-xxl);
+      border: 1px solid var(--color-hairline);
+      border-radius: 0;
+      background: var(--color-canvas);
+    }
+
+    /* -----------------------------------------------------------------------
+     * Responsive breakpoints
+     * ----------------------------------------------------------------------- */
+
+    @media (max-width: 768px) {
+      .content-column {
+        padding: var(--spacing-xl) var(--spacing-lg);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .display-xl {
+        font-size: 22px;
+      }
+
+      .content-column {
+        padding: var(--spacing-lg) var(--spacing-md);
+      }
+
+      .btn-primary,
+      .btn-secondary {
+        width: 100%;
+        display: block;
+        text-align: center;
+        min-height: 44px;
+      }
+
+      .centered-card {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body x-data>
+  <%~ it.body %>
+  <script src="/vendor/htmx.min.js" defer></script>
+  <script src="/vendor/alpine.min.js" defer></script>
+</body>
+</html>
