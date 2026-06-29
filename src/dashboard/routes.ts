@@ -58,7 +58,7 @@ export async function registerDashboardRoutes(
       csrfToken,
       flashError: flashError ?? null,
       showNoDomainBanner,
-    });
+    }, { layout: 'layout.eta' });
   });
 
   // -------------------------------------------------------------------------
@@ -104,7 +104,7 @@ export async function registerDashboardRoutes(
       hasGithubToken: !!getSecretRecord('github_token'),
       hasGithubAppId: !!getSecretRecord('github_app_id'),
       hasGithubAppPrivateKey: !!getSecretRecord('github_app_private_key'),
-    });
+    }, { layout: 'layout.eta' });
   });
 
   // -------------------------------------------------------------------------

@@ -133,11 +133,17 @@ export async function buildServer(
     sessionPlugin: '@fastify/session',
   });
 
-  // 4. View engine -- Eta templates with project-root-relative templates dir
+  // 4. View engine -- Eta templates with project-root-relative templates dir.
+  // NOTE: the layout is intentionally NOT set globally. @fastify/view v12 applies
+  // a global layout to EVERY render and throws if a per-render layout is also
+  // passed ('A layout can either be set globally or on render, not both.'). That
+  // wrapped htmx partial responses (/activity/partial, settings partials) in the
+  // full HTML document, so each 5s poll re-shipped <!DOCTYPE><html><head><style>
+  // into the live DOM. Instead, full-page routes opt in to the layout per-render
+  // via { layout: 'layout.eta' }; partial routes render bare fragments. (WR-01)
   await fastify.register(fastifyView, {
     engine: { eta: new Eta() },
     templates: path.join(PROJECT_ROOT, 'views'),
-    layout: 'layout.eta',
     includeViewExtension: true,
     production: process.env['NODE_ENV'] === 'production',
   });

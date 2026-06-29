@@ -48,7 +48,7 @@ export async function registerActivityRoutes(
       page,
       pageSize: PAGE_SIZE,
       health,
-    });
+    }, { layout: 'layout.eta' });
   });
 
   // -------------------------------------------------------------------------
@@ -100,7 +100,7 @@ export async function registerActivityRoutes(
       csrfToken,
       run,
       findings,
-    });
+    }, { layout: 'layout.eta' });
   });
 
   // -------------------------------------------------------------------------

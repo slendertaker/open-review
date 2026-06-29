@@ -140,7 +140,7 @@ export async function registerSetupRoutes(
         token: '',
         error: null,
         csrfToken: '',
-      });
+      }, { layout: 'layout.eta' });
     }
 
     const csrfToken = await reply.generateCsrf();
@@ -150,7 +150,7 @@ export async function registerSetupRoutes(
       token,
       error: null,
       csrfToken,
-    });
+    }, { layout: 'layout.eta' });
   });
 
   // -------------------------------------------------------------------------
@@ -185,7 +185,7 @@ export async function registerSetupRoutes(
           token,
           error: 'This setup link is invalid or has already been used. Restart the service to generate a new one.',
           csrfToken,
-        });
+        }, { layout: 'layout.eta' });
       }
 
       // Validate password length.
@@ -197,7 +197,7 @@ export async function registerSetupRoutes(
           token,
           error: 'Password must be at least 12 characters.',
           csrfToken,
-        });
+        }, { layout: 'layout.eta' });
       }
 
       // Validate password confirmation.
@@ -209,7 +209,7 @@ export async function registerSetupRoutes(
           token,
           error: 'Passwords do not match.',
           csrfToken,
-        });
+        }, { layout: 'layout.eta' });
       }
 
       // Hash the password with argon2id and store it.
