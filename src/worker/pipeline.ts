@@ -7,8 +7,8 @@
  *   3. getDiff (base...head with ignore globs).
  *   4. readProjectGuidelines (untrusted data wrapped in prompt).
  *   5. buildPrompt (D-15 injection guard).
- *   6. buildClaudeArgs + runWithAuthFallback (D-05, D-06, D-09, D-10).
- *   7. parseClaudeOutput (three shapes, never throws).
+ *   6. provider.invoke (D-05, D-06, D-09, D-10) -- dispatched via getProvider() (D-03).
+ *   7. provider.parseOutput (three shapes, never throws).
  *   8. Fingerprint dedup + min-severity filter.
  *   9. postReview (inline + summary).
  *  10. recordPostedFingerprints + setLastReviewedSha.
@@ -30,8 +30,8 @@ import {
 } from './repo.js';
 import { buildDiffMap } from './diff.js';
 import { buildPrompt } from './prompt.js';
-import { buildClaudeArgs, runWithAuthFallback } from '../provider/claude.js';
-import { parseClaudeOutput, fingerprintFinding, meetsMinSeverity } from '../provider/parser.js';
+import { getProvider } from '../provider/index.js';
+import { fingerprintFinding, meetsMinSeverity } from '../provider/parser.js';
 import { postReview } from '../poster/post.js';
 import {
   getLastReviewedSha,
@@ -51,6 +51,8 @@ const log = buildLogger(process.env['OPEN_REVIEW_LOG_LEVEL'] ?? 'info');
  * disturb the SC5 worktree cleanup guarantee.
  */
 export async function runReview(job: JobPayload, config: ConfigStore): Promise<JobResult> {
+  const provider = getProvider();
+
   // Step 1: Resolve GitHub auth.
   let githubToken: string;
   let octokit: ReturnType<typeof installationOctokit> | undefined;
@@ -98,9 +100,8 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
       ...(guidelines ? { guidelines } : {}),
     });
 
-    const args = buildClaudeArgs(prompt, wtDir);
-    const out = await runWithAuthFallback(args);
-    const parsed = parseClaudeOutput(out.stdout, out.stderr);
+    const out = await provider.invoke(prompt, wtDir);
+    const parsed = provider.parseOutput(out);
 
     // Step 8: Fingerprint dedup + min-severity filter.
     const seen = getPostedFingerprints(prId);

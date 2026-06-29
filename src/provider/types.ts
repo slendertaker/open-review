@@ -38,12 +38,21 @@ export interface RawOutput {
  *
  * Phase 1 ships only ClaudeProvider. The Codex provider (v2) drops in with zero
  * changes to webhook/queue/poster.
+ *
+ * To add a new provider (e.g. CodexProvider):
+ *   1. Implement this interface in src/provider/codex.ts.
+ *   2. Register it in getProvider() in src/provider/index.ts.
+ *   No pipeline, webhook, queue, or poster changes required.
  */
 export interface ReviewProvider {
   /** Build the text prompt from the review context. */
   buildPrompt(ctx: ReviewContext): string;
-  /** Invoke the review subprocess and return raw output. */
-  invoke(args: string[]): Promise<RawOutput>;
+  /**
+   * Invoke the review subprocess and return raw output.
+   * The provider owns CLI flag assembly and sandbox env construction -- the
+   * caller supplies only the human-readable prompt and the worktree path.
+   */
+  invoke(prompt: string, worktreeDir: string): Promise<RawOutput>;
   /** Parse raw subprocess output into typed findings + summary. */
   parseOutput(raw: RawOutput): ParsedOutput;
 }

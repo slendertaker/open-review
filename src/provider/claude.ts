@@ -249,8 +249,8 @@ export class ClaudeProvider implements ReviewProvider {
     return ctx.diff;
   }
 
-  async invoke(args: string[]): Promise<RawOutput> {
-    return runWithAuthFallback(args);
+  async invoke(prompt: string, worktreeDir: string): Promise<RawOutput> {
+    return runWithAuthFallback(buildClaudeArgs(prompt, worktreeDir));
   }
 
   parseOutput(raw: RawOutput): ParsedOutput {
