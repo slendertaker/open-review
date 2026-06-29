@@ -237,7 +237,7 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     lockoutMap.clear();
   });
 
-  it('POST /dashboard/settings/secrets with a webhook secret value saves and returns masked preview', async () => {
+  it('POST /dashboard/settings/secrets with a webhook secret value saves and returns a presence indicator (WR-02)', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
     const secretValue = 'my-super-secret-webhook-value-1234';
@@ -253,10 +253,12 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     expect(res.body).toContain('secrets-section');
     expect(res.body).toContain('Secrets saved.');
 
-    // Response must contain masked preview, not plaintext
-    const masked = maskSecret(secretValue);
-    expect(res.body).toContain(masked);
+    // WR-02: the webhook HMAC secret is shown as a presence indicator only --
+    // no characters of the plaintext (not even the last 4) are echoed back.
+    expect(res.body).toContain('(set)');
     expect(res.body).not.toContain(secretValue);
+    // The trailing 4 chars must NOT appear (they would under the old last-4 mask).
+    expect(res.body).not.toContain(`••••${secretValue.slice(-4)}`);
   });
 
   it('POST /dashboard/settings/secrets response contains NO plaintext secret values', async () => {

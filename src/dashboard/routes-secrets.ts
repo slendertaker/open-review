@@ -170,8 +170,12 @@ export async function registerSecretsRoutes(
  */
 function buildSecretsViewData(store: ConfigStore, machineKey: Buffer): Record<string, unknown> {
   // Webhook secret is in the settings table (plain text).
+  // WR-02: the webhook HMAC secret is a pure shared secret (not a token whose trailing
+  // digits aid identification), so show a presence indicator rather than leaking its
+  // last 4 characters back to the browser. maskSecret last-4 is reserved for OAuth/API
+  // tokens below, where the trailing chars are a deliberate identification aid.
   const webhookSecretVal = store.webhookSecret;
-  const webhookSecretPreview = webhookSecretVal ? maskSecret(webhookSecretVal) : null;
+  const webhookSecretPreview = webhookSecretVal ? '(set)' : null;
 
   // Encrypted secrets: decrypt only to produce a masked preview.
   // We use getSecretRecord + decryptSecret directly to avoid mutating store.
