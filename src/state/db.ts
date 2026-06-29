@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { initDeliveries } from './deliveries.js';
 import { initReviews } from './reviews.js';
 import { initConfig } from './config-state.js';
+import { initReviewRuns } from './review-runs.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +34,7 @@ export function openDb(dbPath: string): Database.Database {
   initDeliveries(db);
   initReviews(db);
   initConfig(db);
+  initReviewRuns(db);
 
   return db;
 }

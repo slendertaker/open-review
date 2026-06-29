@@ -70,3 +70,33 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+-- D3-01/D3-02: Durable per-review history. Append-only; never coalesced or pruned
+-- on the same schedule as job_queue. Activity feed reads from this table, not job_queue.
+CREATE TABLE IF NOT EXISTS review_runs (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  pr_id          TEXT    NOT NULL,
+  owner          TEXT    NOT NULL,
+  repo           TEXT    NOT NULL,
+  pr_number      INTEGER NOT NULL,
+  head_sha       TEXT    NOT NULL,
+  base_sha       TEXT    NOT NULL,
+  installation_id INTEGER,
+  provider       TEXT    NOT NULL,
+  status         TEXT    NOT NULL
+    CHECK (status IN ('running', 'success', 'failed', 'rate_limited')),
+  mode           TEXT    NOT NULL DEFAULT 'full'
+    CHECK (mode IN ('full', 'incremental')),
+  finding_count  INTEGER NOT NULL DEFAULT 0,
+  findings_json  TEXT    NOT NULL DEFAULT '[]',
+  summary        TEXT    NOT NULL DEFAULT '',
+  error          TEXT,
+  log            TEXT    NOT NULL DEFAULT '',
+  created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  started_at     TEXT,
+  finished_at    TEXT,
+  duration_ms    INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_review_runs_created ON review_runs(id DESC);
+CREATE INDEX IF NOT EXISTS idx_review_runs_pr ON review_runs(pr_id, id DESC);
