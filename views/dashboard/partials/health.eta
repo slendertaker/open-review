@@ -51,7 +51,9 @@
     <!-- CLI status -->
     <p class="body-md">
       <strong>CLI:</strong>
-      <% if (it.health.cliVersion) { %>
+      <% if (it.health.cliVersion === 'ok') { %>
+        <span class="caption-md" style="color: var(--color-mute);">[ reachable ]</span>
+      <% } else if (it.health.cliVersion) { %>
         <span class="caption-md" style="color: var(--color-mute);">v<%= it.health.cliVersion %></span>
       <% } else { %>
         <span class="caption-md" style="color: var(--color-error);">
