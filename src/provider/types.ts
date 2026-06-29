@@ -50,9 +50,14 @@ export interface ReviewProvider {
   /**
    * Invoke the review subprocess and return raw output.
    * The provider owns CLI flag assembly and sandbox env construction -- the
-   * caller supplies only the human-readable prompt and the worktree path.
+   * caller supplies only the human-readable prompt, the worktree path, and
+   * (Phase 2+) the resolved Claude credential from the config store.
+   *
+   * credential: the single resolved auth token (D-05 precedence: OAuth first,
+   * then API key). When undefined, the provider falls back to process.env so
+   * Phase 1 env-only installs continue to work without a restart (D2-05).
    */
-  invoke(prompt: string, worktreeDir: string): Promise<RawOutput>;
+  invoke(prompt: string, worktreeDir: string, credential?: string): Promise<RawOutput>;
   /** Parse raw subprocess output into typed findings + summary. */
   parseOutput(raw: RawOutput): ParsedOutput;
 }

@@ -99,10 +99,14 @@ export function buildClaudeArgs(prompt: string, worktreeDir: string): string[] {
  * D-10: Only PATH/HOME/USER + one credential. No GITHUB_TOKEN, WEBHOOK_SECRET,
  * or GITHUB_APP_PRIVATE_KEY ever reach the child process.
  *
- * When useOAuth=true:  CLAUDE_CODE_OAUTH_TOKEN set, ANTHROPIC_API_KEY absent.
- * When useOAuth=false: ANTHROPIC_API_KEY set, CLAUDE_CODE_OAUTH_TOKEN absent.
+ * When useOAuth=true:  CLAUDE_CODE_OAUTH_TOKEN set to token, ANTHROPIC_API_KEY absent.
+ * When useOAuth=false: ANTHROPIC_API_KEY set to token, CLAUDE_CODE_OAUTH_TOKEN absent.
+ *
+ * token: the resolved credential value from the caller (D-05 precedence: OAuth first,
+ * then API key). The token is the ONLY secret value sourced from outside this function.
+ * process.env is never spread into the child env (T-02-18).
  */
-export function buildSandboxEnv(useOAuth: boolean): NodeJS.ProcessEnv {
+export function buildSandboxEnv(useOAuth: boolean, token: string): NodeJS.ProcessEnv {
   // Start from scratch -- never spread process.env to avoid leaking host secrets.
   const env: NodeJS.ProcessEnv = {
     PATH: process.env['PATH'],
@@ -110,12 +114,12 @@ export function buildSandboxEnv(useOAuth: boolean): NodeJS.ProcessEnv {
     USER: process.env['USER'],
   };
 
-  // Add exactly one credential (mutual exclusion -- T-01-I1).
+  // Add exactly one credential (mutual exclusion -- T-01-I1, D-05).
   if (useOAuth) {
-    env['CLAUDE_CODE_OAUTH_TOKEN'] = process.env['CLAUDE_CODE_OAUTH_TOKEN'];
+    env['CLAUDE_CODE_OAUTH_TOKEN'] = token;
     // ANTHROPIC_API_KEY intentionally absent -- OAuth is the primary auth (D-05).
   } else {
-    env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'];
+    env['ANTHROPIC_API_KEY'] = token;
     // CLAUDE_CODE_OAUTH_TOKEN intentionally absent -- API key fallback.
   }
 
@@ -218,19 +222,48 @@ function checkRateLimit(result: RawOutput): RawOutput {
 
 /**
  * Run claude -p with OAuth-first auth, falling back to API-key-only on auth failure (D-05).
+ *
+ * oauthToken: the resolved OAuth token to try first. When undefined, falls back to
+ *   process.env['CLAUDE_CODE_OAUTH_TOKEN'] so Phase 1 env-only installs work.
+ * apiKey: the resolved API key for fallback. When undefined, falls back to
+ *   process.env['ANTHROPIC_API_KEY'].
+ *
+ * D-05 precedence: OAuth first. If the OAuth attempt fails with an auth error,
+ * the API key is used. If both are absent, the first attempt will fail and the
+ * fallback will also fail (the CLI handles the missing-creds error).
  */
-export async function runWithAuthFallback(args: string[]): Promise<RawOutput> {
-  const result = checkRateLimit(
-    await spawnClaude(args, buildSandboxEnv(true)),
-  );
+export async function runWithAuthFallback(
+  args: string[],
+  oauthToken?: string,
+  apiKey?: string,
+): Promise<RawOutput> {
+  // Resolve actual token values: store-supplied credential wins; process.env is last-resort.
+  const resolvedOauth = oauthToken ?? process.env['CLAUDE_CODE_OAUTH_TOKEN'];
+  const resolvedApiKey = apiKey ?? process.env['ANTHROPIC_API_KEY'];
 
-  if (result.exitCode === 1 && isAuthError(result.stderr)) {
-    return checkRateLimit(
-      await spawnClaude(args, buildSandboxEnv(false)),
+  // Only attempt OAuth if we have an OAuth token.
+  if (resolvedOauth) {
+    const result = checkRateLimit(
+      await spawnClaude(args, buildSandboxEnv(true, resolvedOauth)),
     );
+
+    if (result.exitCode === 1 && isAuthError(result.stderr)) {
+      // OAuth failed -- fall back to API key if available.
+      if (resolvedApiKey) {
+        return checkRateLimit(
+          await spawnClaude(args, buildSandboxEnv(false, resolvedApiKey)),
+        );
+      }
+    }
+
+    return result;
   }
 
-  return result;
+  // No OAuth token: attempt with API key directly (single try, no fallback).
+  const fallbackKey = resolvedApiKey ?? '';
+  return checkRateLimit(
+    await spawnClaude(args, buildSandboxEnv(false, fallbackKey)),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -249,8 +282,45 @@ export class ClaudeProvider implements ReviewProvider {
     return ctx.diff;
   }
 
-  async invoke(prompt: string, worktreeDir: string): Promise<RawOutput> {
-    return runWithAuthFallback(buildClaudeArgs(prompt, worktreeDir));
+  /**
+   * Invoke the Claude CLI review subprocess.
+   *
+   * credential: the store-resolved auth token from runReview (D-05 precedence: OAuth
+   * first, then API key as fallback). The pipeline resolves which token is primary
+   * and passes the selected token here. If the token is a CLAUDE_CODE_OAUTH_TOKEN
+   * value, pass it as oauthToken; if it is an ANTHROPIC_API_KEY value, it goes in
+   * as the apiKey fallback.
+   *
+   * When credential is undefined (Phase 1 env-only install), process.env is the
+   * last-resort fallback inside runWithAuthFallback (D-05 backward-compat).
+   *
+   * The credential string is opaque to invoke(). The pipeline encodes the credential
+   * type by calling invokeResolved() with explicit (oauthToken, apiKey) so D-05
+   * OAuth-first ordering is preserved. This invoke() shim delegates to invokeResolved().
+   */
+  async invoke(prompt: string, worktreeDir: string, credential?: string): Promise<RawOutput> {
+    // Phase 1 compatibility shim: when credential is absent, fall back to process.env.
+    // For Phase 2+ the pipeline uses invokeResolved() directly.
+    return runWithAuthFallback(buildClaudeArgs(prompt, worktreeDir), credential, undefined);
+  }
+
+  /**
+   * Invoke with typed credentials resolved by the pipeline (D-05, T-02-18).
+   *
+   * oauthToken: store.claudeOauthToken (primary per D-05); undefined if not stored.
+   * apiKey: store.anthropicApiKey (fallback per D-05); undefined if not stored.
+   *
+   * runWithAuthFallback tries OAuth first; falls back to API key on auth failure.
+   * When both are undefined, it falls back to process.env (last-resort for env-only
+   * installs so Phase 1 setups continue to work without restart).
+   */
+  async invokeResolved(
+    prompt: string,
+    worktreeDir: string,
+    oauthToken: string | undefined,
+    apiKey: string | undefined,
+  ): Promise<RawOutput> {
+    return runWithAuthFallback(buildClaudeArgs(prompt, worktreeDir), oauthToken, apiKey);
   }
 
   parseOutput(raw: RawOutput): ParsedOutput {

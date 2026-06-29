@@ -31,6 +31,7 @@ import {
 import { buildDiffMap } from './diff.js';
 import { buildPrompt } from './prompt.js';
 import { getProvider } from '../provider/index.js';
+import { ClaudeProvider } from '../provider/claude.js';
 import { fingerprintFinding, meetsMinSeverity } from '../provider/parser.js';
 import { postReview } from '../poster/post.js';
 import {
@@ -52,6 +53,15 @@ const log = buildLogger(process.env['OPEN_REVIEW_LOG_LEVEL'] ?? 'info');
  */
 export async function runReview(job: JobPayload, config: ConfigStore): Promise<JobResult> {
   const provider = getProvider(config.provider);
+
+  // Resolve Claude credentials from the live store with D-05 precedence:
+  //   1. store.claudeOauthToken (primary OAuth)
+  //   2. store.anthropicApiKey (API key fallback)
+  //   3. process.env (last-resort for Phase 1 env-only installs -- no restart required)
+  // The resolved values are passed into provider.invoke so the subprocess never
+  // reads credentials directly from process.env (T-02-18, DCFG-05).
+  const resolvedOauthToken = config.claudeOauthToken;
+  const resolvedApiKey = config.anthropicApiKey;
 
   // Step 1: Resolve GitHub auth.
   let githubToken: string;
@@ -100,7 +110,12 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
       ...(guidelines ? { guidelines } : {}),
     });
 
-    const out = await provider.invoke(prompt, wtDir);
+    // Pass store-resolved credentials to the Claude provider so the review subprocess
+    // uses the live stored credential (DCFG-05). invokeResolved is a ClaudeProvider-
+    // specific method; the generic interface invoke() is used for other providers.
+    const out = await (provider instanceof ClaudeProvider
+      ? provider.invokeResolved(prompt, wtDir, resolvedOauthToken, resolvedApiKey)
+      : provider.invoke(prompt, wtDir));
     const parsed = provider.parseOutput(out);
 
     // Step 8: Fingerprint dedup + min-severity filter.

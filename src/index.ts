@@ -85,6 +85,7 @@ async function main(): Promise<void> {
     store,
     db,
     (prId: string, payload: string) => queue.enqueue(prId, payload),
+    machineKey,
   );
 
   await server.listen({ port: store.port, host: store.host });

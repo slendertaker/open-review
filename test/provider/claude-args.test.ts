@@ -81,65 +81,42 @@ describe('buildClaudeArgs (ENGN-04)', () => {
 
 describe('buildSandboxEnv (ENGN-05)', () => {
   it('returns an object with PATH, HOME, and USER', () => {
-    // Temporarily set env vars if not present
-    const saved = {
-      PATH: process.env['PATH'],
-      HOME: process.env['HOME'],
-      USER: process.env['USER'],
-      CLAUDE_CODE_OAUTH_TOKEN: process.env['CLAUDE_CODE_OAUTH_TOKEN'],
-    };
-    process.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'fake-oauth-token';
-
-    const env = buildSandboxEnv(true);
+    const env = buildSandboxEnv(true, 'fake-oauth-token');
     expect(env['PATH']).toBeDefined();
     expect(env['HOME']).toBeDefined();
     expect(env['USER']).toBeDefined();
-
-    // Restore
-    Object.assign(process.env, saved);
   });
 
   it('includes CLAUDE_CODE_OAUTH_TOKEN and not ANTHROPIC_API_KEY when useOAuth=true', () => {
-    process.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'test-oauth-token';
-    process.env['ANTHROPIC_API_KEY'] = 'test-api-key';
-
-    const env = buildSandboxEnv(true);
-    expect(env['CLAUDE_CODE_OAUTH_TOKEN']).toBeDefined();
+    // Token is passed explicitly -- process.env is NOT read by buildSandboxEnv (T-02-18)
+    const env = buildSandboxEnv(true, 'test-oauth-token');
+    expect(env['CLAUDE_CODE_OAUTH_TOKEN']).toBe('test-oauth-token');
     expect(env['ANTHROPIC_API_KEY']).toBeUndefined();
-
-    delete process.env['CLAUDE_CODE_OAUTH_TOKEN'];
-    delete process.env['ANTHROPIC_API_KEY'];
   });
 
   it('includes ANTHROPIC_API_KEY and not CLAUDE_CODE_OAUTH_TOKEN when useOAuth=false', () => {
-    process.env['CLAUDE_CODE_OAUTH_TOKEN'] = 'test-oauth-token';
-    process.env['ANTHROPIC_API_KEY'] = 'test-api-key';
-
-    const env = buildSandboxEnv(false);
-    expect(env['ANTHROPIC_API_KEY']).toBeDefined();
+    const env = buildSandboxEnv(false, 'test-api-key');
+    expect(env['ANTHROPIC_API_KEY']).toBe('test-api-key');
     expect(env['CLAUDE_CODE_OAUTH_TOKEN']).toBeUndefined();
-
-    delete process.env['CLAUDE_CODE_OAUTH_TOKEN'];
-    delete process.env['ANTHROPIC_API_KEY'];
   });
 
   it('never includes GITHUB_TOKEN (secret isolation, ENGN-05)', () => {
     process.env['GITHUB_TOKEN'] = 'ghs_secret';
-    const env = buildSandboxEnv(true);
+    const env = buildSandboxEnv(true, 'some-token');
     expect(env['GITHUB_TOKEN']).toBeUndefined();
     delete process.env['GITHUB_TOKEN'];
   });
 
   it('never includes WEBHOOK_SECRET (secret isolation, ENGN-05)', () => {
     process.env['WEBHOOK_SECRET'] = 'very-secret';
-    const env = buildSandboxEnv(true);
+    const env = buildSandboxEnv(true, 'some-token');
     expect(env['WEBHOOK_SECRET']).toBeUndefined();
     delete process.env['WEBHOOK_SECRET'];
   });
 
   it('never includes GITHUB_APP_PRIVATE_KEY (secret isolation, ENGN-05)', () => {
     process.env['GITHUB_APP_PRIVATE_KEY'] = '-----BEGIN RSA PRIVATE KEY-----';
-    const env = buildSandboxEnv(true);
+    const env = buildSandboxEnv(true, 'some-token');
     expect(env['GITHUB_APP_PRIVATE_KEY']).toBeUndefined();
     delete process.env['GITHUB_APP_PRIVATE_KEY'];
   });

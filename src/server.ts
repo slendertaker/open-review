@@ -39,6 +39,7 @@ import { SqliteSessionStore } from './state/sessions.js';
 import { setSetting } from './state/config-state.js';
 import { registerSetupRoutes } from './dashboard/setup.js';
 import { registerDashboardRoutes } from './dashboard/routes.js';
+import { setSecretsMachineKey } from './dashboard/routes-secrets.js';
 import { log } from './logger.js';
 import type { ConfigStore } from './config/store.js';
 import type Database from 'better-sqlite3';
@@ -58,7 +59,14 @@ export async function buildServer(
   store: ConfigStore,
   db: Database.Database,
   enqueue: (prId: string, payload: string) => void,
+  machineKey?: Buffer,
 ): Promise<FastifyApp> {
+  // Wire the machine key for secret encryption in the secrets route handler.
+  // When undefined (e.g. tests that do not supply a key), getMachineKey() falls back
+  // to loadMachineKey() which reads data/secret.key or OPEN_REVIEW_SECRET_KEY env.
+  if (machineKey) {
+    setSecretsMachineKey(machineKey);
+  }
   // trustProxy: true -- required for secure:'auto' cookie behavior behind Caddy (D2-11, Pitfall 2).
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
   const fastify: FastifyApp = (_Fastify as unknown as (opts: Record<string, unknown>) => FastifyApp)(

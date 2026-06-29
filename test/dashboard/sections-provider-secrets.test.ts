@@ -77,7 +77,7 @@ describe('Provider section (DCFG-04) -- Plan 04 Task 1', () => {
     store = new SqliteConfigStore(db, makeKey());
     const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
     setSetting('password_hash', hash);
-    server = await buildServer(store, db, () => {});
+    server = await buildServer(store, db, () => {}, makeKey());
     lockoutMap.clear();
   });
 
@@ -228,7 +228,7 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     store = new SqliteConfigStore(db, KEY);
     const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
     setSetting('password_hash', hash);
-    server = await buildServer(store, db, () => {});
+    server = await buildServer(store, db, () => {}, KEY);
     lockoutMap.clear();
   });
 
