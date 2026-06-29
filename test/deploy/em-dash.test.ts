@@ -18,7 +18,7 @@ import path from 'node:path';
 
 // Reference the em-dash via its Unicode escape, NOT a literal glyph,
 // so this test file itself cannot trigger its own guard if the scope widens.
-const EM_DASH = '—';
+const EM_DASH = '\u2014';
 
 const SURFACES = [
   'views/**/*.eta',
