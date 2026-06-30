@@ -75,7 +75,7 @@ describe('Access section -- change password (DSEC-01) -- Plan 05', () => {
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);
@@ -147,7 +147,7 @@ describe('Access section -- change password (DSEC-01) -- Plan 05', () => {
     // The original session cookie should still grant access to /dashboard.
     const dashRes = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie: authedCookie },
     });
     expect(dashRes.statusCode).toBe(200);
@@ -256,7 +256,7 @@ describe('Access section -- domain (DSEC-02, DCFG-01) -- Plan 05', () => {
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);

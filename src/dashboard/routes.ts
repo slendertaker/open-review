@@ -116,7 +116,7 @@ export async function registerDashboardRoutes(
   // GET /dashboard redirects to the default General sub-page (D-02).
   // requireLogin guard is preserved: unauthenticated requests still route through login.
   fastify.get('/dashboard', { preHandler: requireLogin }, async (_req: Req, reply: Rep) => {
-    return reply.redirect(302, '/settings/general');
+    return reply.redirect('/settings/general', 302);
   });
 
   // -------------------------------------------------------------------------

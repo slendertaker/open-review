@@ -112,7 +112,7 @@ describe('dashboard auth (DSEC-01) -- Plan 02', () => {
     expect(res.headers['location']).toMatch(/\/login/);
   });
 
-  it('authenticated GET /dashboard renders the styled dashboard shell (200)', async () => {
+  it('authenticated GET /dashboard redirects to /settings/general (D-02)', async () => {
     const { csrf, cookie } = await loginPagePrelude();
     const loginRes = await server.inject({
       method: 'POST',
@@ -122,24 +122,30 @@ describe('dashboard auth (DSEC-01) -- Plan 02', () => {
     });
     const authedCookie = cookieHeader(loginRes);
 
-    const res = await server.inject({
+    // /dashboard now redirects to /settings/general (D-02 default sub-page redirect).
+    const redirectRes = await server.inject({
       method: 'GET',
       url: '/dashboard',
       headers: { cookie: authedCookie },
     });
 
+    expect(redirectRes.statusCode).toBe(302);
+    expect(redirectRes.headers['location']).toMatch(/\/settings\/general/);
+
+    // Follow the redirect: /settings/general renders the sidebar shell with all nav sections.
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/general',
+      headers: { cookie: authedCookie },
+    });
+
     expect(res.statusCode).toBe(200);
-    // Shell renders the nav strip wordmark and all five section headers.
+    // Shell renders the sidebar wordmark and nav items.
     expect(res.body).toContain('Open Review');
     expect(res.body).toContain('Sign out');
-    for (const section of ['General', 'Repositories', 'Provider', 'Secrets', 'Access']) {
+    for (const section of ['General', 'Provider', 'Secrets', 'GitHub', 'Health']) {
       expect(res.body).toContain(section);
     }
-    // Regression: the GitHub section must lazy-load its connected/not-connected state
-    // via htmx on page load. Without this, the main page always shows the static
-    // not-connected branch even when an App is connected, so repo selection is unreachable.
-    expect(res.body).toContain('hx-get="/dashboard/github"');
-    expect(res.body).toContain('hx-trigger="load"');
   });
 
   it('session id is regenerated after login (session fixation prevention)', async () => {

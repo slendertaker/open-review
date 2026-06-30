@@ -66,7 +66,7 @@ describe('Provider section (DCFG-04) -- Plan 04 Task 1', () => {
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);
@@ -130,7 +130,7 @@ describe('Provider section (DCFG-04) -- Plan 04 Task 1', () => {
     const cookie = await login();
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/provider',
       headers: { cookie },
     });
 
@@ -217,7 +217,7 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);
@@ -347,7 +347,7 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     // Re-fetch to verify the rendered partial has no value attribute containing the secret
     const dashboardRes = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
 

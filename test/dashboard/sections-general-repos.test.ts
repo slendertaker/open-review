@@ -60,7 +60,7 @@ describe('General section (DCFG-01, DCFG-05) -- Plan 03', () => {
   async function getAuthCsrf(cookie: string): Promise<string> {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/general',
       headers: { cookie },
     });
     return extractCsrf(res.body as string);
@@ -276,7 +276,7 @@ describe('Repositories section (DCFG-03, DCFG-05) -- Plan 03', () => {
   }
 
   async function getAuthCsrf(cookie: string): Promise<string> {
-    const res = await server.inject({ method: 'GET', url: '/dashboard', headers: { cookie } });
+    const res = await server.inject({ method: 'GET', url: '/settings/general', headers: { cookie } });
     return extractCsrf(res.body as string);
   }
 
@@ -438,7 +438,7 @@ describe('Repositories section (DCFG-03, DCFG-05) -- Plan 03', () => {
 
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard',
+      url: '/settings/repos',
       headers: { cookie },
     });
 
