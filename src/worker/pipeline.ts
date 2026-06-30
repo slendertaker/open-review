@@ -21,6 +21,7 @@
 import { buildLogger, scrub } from '../logger.js';
 import type { ConfigStore } from '../config/store.js';
 import type { JobPayload, JobResult } from '../queue/types.js';
+import type { RawOutput } from '../provider/types.js';
 import {
   acquireWorktree,
   releaseWorktree,
@@ -41,6 +42,44 @@ import {
   recordPostedFingerprints,
 } from '../state/reviews.js';
 import { installationOctokit, installationToken, patOctokit } from '../github/app.js';
+
+/**
+ * Assert that the provider subprocess succeeded (exit code 0).
+ * Throws a scrubbed, bounded error message on non-zero exit so the pipeline
+ * fails before any parsing, dedup, or postReview happens (T-jr6-01).
+ *
+ * RateLimitError (exit 29) is thrown earlier inside the provider (checkRateLimit)
+ * and never reaches this guard. This guard catches all other non-zero exits,
+ * including 401 authentication failures with empty stdout.
+ *
+ * Exported for unit tests.
+ */
+export function assertProviderSucceeded(out: RawOutput): void {
+  if (out.exitCode === 0) return;
+  // Prefer stderr when it has non-whitespace content; fall back to stdout.
+  const raw = out.stderr.trim() ? out.stderr : out.stdout;
+  // Bound to the last 2000 characters before scrubbing.
+  const tail = raw.length > 2000 ? raw.slice(-2000) : raw;
+  const scrubbedTail = scrub(tail.trim() || '(no output)');
+  throw new Error(`review runner failed: provider exited with code ${out.exitCode}: ${scrubbedTail}`);
+}
+
+/**
+ * Build a scrubbed, bounded log string for durable storage (D3-04, T-jr6-02).
+ * Replaces the previous `String(out ?? '')` construction that always produced
+ * "[object Object]" because out is a RawOutput object.
+ *
+ * Exported for unit tests.
+ */
+export function formatRunLog(logMeta: string, out: RawOutput): string {
+  const stdoutTail = out.stdout.length > 2000 ? out.stdout.slice(-2000) : out.stdout;
+  let result = `${logMeta}\nexit=${out.exitCode}\n${stdoutTail}`;
+  if (out.stderr.trim()) {
+    const stderrTail = out.stderr.length > 2000 ? out.stderr.slice(-2000) : out.stderr;
+    result += `\nstderr: ${stderrTail}`;
+  }
+  return scrub(result);
+}
 
 const log = buildLogger(process.env['OPEN_REVIEW_LOG_LEVEL'] ?? 'info');
 
@@ -116,6 +155,10 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
     const out = await (provider instanceof ClaudeProvider
       ? provider.invokeResolved(prompt, wtDir, resolvedOauthToken, resolvedApiKey)
       : provider.invoke(prompt, wtDir));
+    // Trust-critical gate (T-jr6-01): a non-zero exit means the subprocess failed
+    // (e.g. 401 auth error). Throw before parsing so nothing is posted to GitHub
+    // and src/index.ts records status='failed' with the scrubbed error message.
+    assertProviderSucceeded(out);
     const parsed = provider.parseOutput(out);
 
     // Step 8: Fingerprint dedup + min-severity filter.
@@ -154,8 +197,9 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
     recordPostedFingerprints(prId, freshFindings.map(fingerprintFinding));
     setLastReviewedSha(prId, job.headSha);
 
-    // Build a scrubbed, bounded log string for durable storage (D3-04).
-    // Combines key review-complete fields with a bounded tail of provider output.
+    // Build a scrubbed, bounded log string for durable storage (D3-04, T-jr6-02).
+    // formatRunLog captures the real exit code + stdout/stderr instead of the
+    // previous String(out) which always produced "[object Object]".
     const logMeta = JSON.stringify({
       repo: `${job.owner}/${job.repo}`,
       prNumber: job.prNumber,
@@ -163,8 +207,7 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
       findingCount: parsed.findings.length,
       freshCount: freshFindings.length,
     });
-    const outTail = typeof out === 'string' ? out : String(out ?? '');
-    const rawLog = scrub(`${logMeta}\n${outTail}`);
+    const rawLog = formatRunLog(logMeta, out);
 
     return {
       findings: freshFindings,
