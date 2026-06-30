@@ -34,11 +34,12 @@ OOMPolicy=continue
 
 # Hardening (D4-02) -- ReadWritePaths must cover both the SQLite data dir and the
 # bare-clone cache parent (.open-review) or boot/clone fails under ProtectSystem=strict.
+# /etc/caddy is required for the runtime domain-save Caddyfile write (D4-06).
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=/opt/open-review/data /opt/open-review/.open-review
+ReadWritePaths=/opt/open-review/data /opt/open-review/.open-review /etc/caddy
 
 [Install]
 WantedBy=multi-user.target
