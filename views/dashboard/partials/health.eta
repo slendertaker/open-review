@@ -1,4 +1,4 @@
-<section style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="health-section" class="section-card">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Service health</h2>

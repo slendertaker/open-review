@@ -1,4 +1,4 @@
-<section id="access-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="access-section" class="section-card">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Access</h2>
@@ -57,7 +57,7 @@
 
       <!-- Submit + flash -->
       <div style="margin-top: var(--spacing-3);">
-        <button type="submit" class="btn-primary">[ change password ]</button>
+        <button type="submit" class="btn btn-primary">Change password</button>
       </div>
 
       <% if (it.flash) { %>
@@ -97,7 +97,7 @@
 
       <!-- Submit + flash -->
       <div style="margin-top: var(--spacing-3);">
-        <button type="submit" class="btn-secondary">[ save domain ]</button>
+        <button type="submit" class="btn btn-secondary">Save domain</button>
       </div>
 
       <% if (it.domainFlash) { %>
