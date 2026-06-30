@@ -108,7 +108,7 @@ fi
 
 if [ -d "$INSTALL_ROOT/.git" ]; then
   echo "==> Updating existing install (upgrade)..."
-  git -C "$INSTALL_ROOT" pull --ff-only
+  sudo -u "$SVC_USER" git -C "$INSTALL_ROOT" pull --ff-only
 else
   echo "==> Cloning repository into $INSTALL_ROOT..."
   git clone --depth 1 "$REPO_URL" "$INSTALL_ROOT"
