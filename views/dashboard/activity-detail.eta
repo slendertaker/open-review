@@ -6,17 +6,19 @@
 </nav>
 
 <main class="content-column">
-  <section id="detail-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+  <%
+    function runBadgeClass(status) {
+      const map = { running: 'running', success: 'success', failed: 'failed', rate_limited: 'rate-limited' };
+      return map[status] || 'running';
+    }
+    function severityBadgeClass(severity) {
+      const map = { high: 'high', critical: 'high', medium: 'medium', low: 'low' };
+      return map[severity] || 'low';
+    }
+  %>
+  <section id="detail-section" class="section-card">
     <div class="section-header">
-      <%
-        let runIcon = 'check';
-        let statusClass = 'status-unknown';
-        if (it.run.status === 'running')      { runIcon = 'loader'; statusClass = 'status-running'; }
-        else if (it.run.status === 'success') { runIcon = 'check';  statusClass = 'status-success'; }
-        else if (it.run.status === 'failed')  { runIcon = 'x';      statusClass = 'status-failed'; }
-        else if (it.run.status === 'rate_limited') { runIcon = 'alert'; statusClass = 'status-warning'; }
-      %>
-      <span class="bracket-prefix <%= statusClass %>" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: runIcon }) %></span>
+      <span class="badge badge--<%= runBadgeClass(it.run.status) %>"><%= it.run.status %></span>
       <h2 class="heading-md">Review #<%= it.run.id %>: <%= it.run.owner %>/<%= it.run.repo %> #<%= it.run.pr_number %></h2>
     </div>
 
@@ -52,7 +54,6 @@
     <!-- Findings -->
     <div style="margin-top: var(--spacing-4);">
       <div class="section-header">
-        <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'loader' }) %></span>
         <h3 class="heading-md">Findings (<%= it.run.finding_count %>)</h3>
       </div>
       <% if (!it.findings || it.findings.length === 0) { %>
@@ -60,23 +61,12 @@
       <% } else { %>
       <div style="margin-top: var(--spacing-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden;">
         <% for (const finding of it.findings) { %>
-        <%
-          let severityClass = 'status-unknown';
-          let sevIcon = 'alert';
-          if (finding.severity === 'critical') { severityClass = 'status-failed';   sevIcon = 'alert'; }
-          else if (finding.severity === 'high') { severityClass = 'status-failed';  sevIcon = 'x'; }
-          else if (finding.severity === 'medium') { severityClass = 'status-warning'; sevIcon = 'loader'; }
-          else if (finding.severity === 'low') { severityClass = 'status-running';  sevIcon = 'check'; }
-        %>
         <div style="padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border);">
           <div style="display: flex; align-items: baseline; gap: var(--spacing-3);">
-            <span class="bracket-prefix <%= severityClass %>" style="display:inline-flex;align-items:center;min-width:3ch;"><%~ include('./partials/icons', { name: sevIcon }) %></span>
-            <span class="caption-md" style="color: var(--color-text-muted);"><%= finding.severity %></span>
-            <span class="body-md" style="font-family: 'Geist Mono', monospace; color: var(--color-text-muted);">
-              <%= finding.file %>:<%= finding.line %>
-            </span>
+            <span class="badge badge--<%= severityBadgeClass(finding.severity) %>"><%= finding.severity %></span>
+            <span class="body-md" style="font-family: 'Geist Mono', monospace; color: var(--color-text-muted);"><%= finding.file %>:<%= finding.line %></span>
           </div>
-          <p class="body-md" style="margin-top: var(--spacing-1); padding-left: calc(3ch + var(--spacing-3));"><%= finding.message %></p>
+          <p class="body-md" style="margin-top: var(--spacing-1);"><%= finding.message %></p>
         </div>
         <% } %>
       </div>
@@ -95,12 +85,11 @@
     <% if (it.run.log) { %>
     <div style="margin-top: var(--spacing-4);" x-data="{ expanded: false }">
       <div class="section-header" style="cursor: pointer;" @click="expanded = !expanded">
-        <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'loader' }) %></span>
         <h3 class="heading-md">Captured log</h3>
-        <span class="caption-md" style="color: var(--color-text-muted);" x-text="expanded ? '[ collapse ]' : '[ expand ]'"></span>
+        <span class="caption-md" style="color: var(--color-text-muted);" x-text="expanded ? 'collapse' : 'expand'"></span>
       </div>
       <div x-show="expanded" style="margin-top: var(--spacing-3);">
-        <pre class="body-md" style="font-family: 'Geist Mono', monospace; background: var(--color-surface-raised); color: var(--color-bg); padding: var(--spacing-3); border-radius: var(--radius-sm); overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"><%= it.run.log %></pre>
+        <pre class="body-md" style="font-family: 'Geist Mono', monospace; background: var(--color-surface-raised); color: var(--color-text-primary); padding: var(--spacing-3); border-radius: var(--radius-sm); overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"><%= it.run.log %></pre>
       </div>
     </div>
     <% } %>
@@ -114,7 +103,7 @@
         style="display: inline;"
       >
         <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
-        <button type="submit" class="btn-secondary">[ re-trigger ]</button>
+        <button type="submit" class="btn btn-secondary">Re-trigger</button>
       </form>
       <a href="/activity" class="body-md" style="color: var(--color-text-muted);">Back to Activity</a>
     </div>
