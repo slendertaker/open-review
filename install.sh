@@ -189,25 +189,39 @@ echo "==> Installing systemd unit..."
 cp "$INSTALL_ROOT/deploy/open-review.service.tmpl" /etc/systemd/system/open-review.service
 
 echo "==> Rendering Caddyfile..."
-if [ -n "${OPEN_REVIEW_DOMAIN:-}" ]; then
-  # Domain mode: Caddy handles ACME HTTPS automatically.
-  cat > /etc/caddy/Caddyfile <<CADDYEOF
+# Seed the Caddyfile only on first install. After first boot the dashboard owns
+# the domain/HTTPS config (it rewrites /etc/caddy/Caddyfile via applyDomain), so
+# an upgrade must not clobber an operator-configured domain.
+if [ ! -f /etc/caddy/Caddyfile ]; then
+  if [ -n "${OPEN_REVIEW_DOMAIN:-}" ]; then
+    # Domain mode: Caddy handles ACME HTTPS automatically.
+    cat > /etc/caddy/Caddyfile <<CADDYEOF
 ${OPEN_REVIEW_DOMAIN} {
     reverse_proxy 127.0.0.1:${OPEN_REVIEW_PORT:-3000}
 }
 CADDYEOF
-else
-  # IP-only mode: plain HTTP on port 80.
-  cat > /etc/caddy/Caddyfile <<CADDYEOF
+  else
+    # IP-only mode: plain HTTP on port 80.
+    cat > /etc/caddy/Caddyfile <<CADDYEOF
 :80 {
     reverse_proxy 127.0.0.1:${OPEN_REVIEW_PORT:-3000}
 }
 CADDYEOF
+  fi
 fi
 
-echo "==> Enabling and starting open-review service..."
+# Let the service user rewrite the Caddyfile at runtime (dashboard domain save).
+# /etc/caddy is in the unit's ReadWritePaths, but the file itself must also be
+# owned by the service user; otherwise the sandboxed write fails with EACCES.
+chown "$SVC_USER":"$SVC_USER" /etc/caddy/Caddyfile
+
+echo "==> Enabling and (re)starting open-review service..."
 systemctl daemon-reload
-systemctl enable --now open-review.service
+systemctl enable open-review.service
+# Use restart (not enable --now) so a re-run/upgrade actually loads the freshly
+# built code and the current unit file. enable --now is a no-op on an already
+# running service, which would leave the old process serving stale code.
+systemctl restart open-review.service
 
 echo "==> Reloading Caddy..."
 systemctl reload caddy || systemctl restart caddy
