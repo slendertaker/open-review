@@ -10,8 +10,8 @@
 
     <form
       hx-post="/dashboard/settings/password"
-      hx-target="#access-section"
-      hx-swap="outerHTML"
+      hx-target="#content"
+      hx-swap="innerHTML"
     >
       <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
 
@@ -74,8 +74,8 @@
 
     <form
       hx-post="/dashboard/settings/domain"
-      hx-target="#domain-subsection"
-      hx-swap="outerHTML"
+      hx-target="#content"
+      hx-swap="innerHTML"
     >
       <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
 

@@ -13,8 +13,8 @@
         <span class="body-md" style="color: var(--color-body);"><span style="color: var(--color-mute);">[-]</span> <%= repo %></span>
         <form
           hx-delete="/dashboard/repos/<%= encodeURIComponent(repo) %>"
-          hx-target="#repos-section"
-          hx-swap="outerHTML"
+          hx-target="#content"
+          hx-swap="innerHTML"
           style="display: inline;"
         >
           <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
@@ -29,8 +29,8 @@
     <!-- Add repo row -->
     <form
       hx-post="/dashboard/repos"
-      hx-target="#repos-section"
-      hx-swap="outerHTML"
+      hx-target="#content"
+      hx-swap="innerHTML"
       style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); align-items: flex-end;"
     >
       <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
