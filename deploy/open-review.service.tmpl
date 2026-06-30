@@ -18,6 +18,12 @@ Environment=NODE_OPTIONS=--max-old-space-size=384
 # node_modules/.bin must come first so the pinned @anthropic-ai/claude-code binary
 # resolves for both assertClaudeVersion at startup and the worker subprocess.
 Environment=PATH=/opt/open-review/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# OPEN_REVIEW_ROOT pins PROJECT_ROOT to the repo root (not dist/) so the review
+# subprocess resolves --settings config/review-settings.json and the relative
+# hooks/enforce-readonly.sh path (src/provider/claude.ts buildClaudeArgs). Without
+# it, PROJECT_ROOT falls back to dist/ and every review fails with "Settings file
+# not found: .../dist/config/review-settings.json".
+Environment=OPEN_REVIEW_ROOT=/opt/open-review
 EnvironmentFile=/etc/open-review/open-review.env
 ExecStart=/usr/bin/node dist/src/index.js
 Restart=on-failure
