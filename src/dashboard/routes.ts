@@ -10,7 +10,6 @@
  * single mount point -- Wave 3 plans never edit routes.ts or index.eta.
  */
 
-import { getSetting, getSecretRecord } from '../state/config-state.js';
 import { requireLogin, loginHandler, logoutHandler } from './auth.js';
 import { registerGeneralRoutes } from './routes-general.js';
 import { registerReposRoutes } from './routes-repos.js';
@@ -19,6 +18,7 @@ import { registerSecretsRoutes } from './routes-secrets.js';
 import { registerAccessRoutes } from './routes-access.js';
 import { registerActivityRoutes } from './routes-activity.js';
 import { registerGithubRoutes } from './routes-github.js';
+import { registerHealthRoutes } from './routes-health.js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,32 +113,10 @@ export async function registerDashboardRoutes(
   // -------------------------------------------------------------------------
   // GET /dashboard -- main settings page (requires authentication)
   // -------------------------------------------------------------------------
-  fastify.get('/dashboard', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
-    const csrfToken = await reply.generateCsrf();
-
-    return reply.viewAsync('dashboard/index', {
-      ...viewGlobals(req),
-      title: 'Settings - Open Review',
-      csrfToken,
-      // Pass current config values for the section partials.
-      minSeverity: store.minSeverity,
-      skipDrafts: store.skipDrafts,
-      skipForks: store.skipForks,
-      ignoreGlobs: store.ignoreGlobs.join('\n'),
-      repos: store.repos,
-      provider: store.provider,
-      domain: store.domain ?? '',
-      // Secret presence flags (write-only -- never send plaintext).
-      // webhook_secret lives in the settings table; the five encrypted credentials
-      // are stored in the secrets table via setSecretRecord, so their presence must
-      // be read with getSecretRecord (getSetting would always miss and render "(not set)").
-      hasWebhookSecret: !!getSetting('webhook_secret'),
-      hasClaudeOauthToken: !!getSecretRecord('claude_oauth_token'),
-      hasAnthropicApiKey: !!getSecretRecord('anthropic_api_key'),
-      hasGithubToken: !!getSecretRecord('github_token'),
-      hasGithubAppId: !!getSecretRecord('github_app_id'),
-      hasGithubAppPrivateKey: !!getSecretRecord('github_app_private_key'),
-    }, { layout: 'layout.eta' });
+  // GET /dashboard redirects to the default General sub-page (D-02).
+  // requireLogin guard is preserved: unauthenticated requests still route through login.
+  fastify.get('/dashboard', { preHandler: requireLogin }, async (_req: Req, reply: Rep) => {
+    return reply.redirect(302, '/settings/general');
   });
 
   // -------------------------------------------------------------------------
@@ -151,4 +129,5 @@ export async function registerDashboardRoutes(
   await registerAccessRoutes(fastify, store, db);
   await registerActivityRoutes(fastify, store, db, enqueue);
   await registerGithubRoutes(fastify, store, db);
+  await registerHealthRoutes(fastify, store, db);
 }
