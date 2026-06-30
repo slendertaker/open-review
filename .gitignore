@@ -4,6 +4,7 @@
 !.env.example
 *.pem
 .secrets/
+vps.txt
 
 # Dependencies
 node_modules/
