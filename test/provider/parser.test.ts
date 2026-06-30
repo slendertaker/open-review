@@ -202,3 +202,38 @@ describe('FINDINGS_SCHEMA', () => {
     expect(schema.properties.findings).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 401 degradation contract (T-jr6-01) -- documents why exitCode is authoritative
+// ---------------------------------------------------------------------------
+
+describe('parseClaudeOutput: 401 degradation and empty-stdout contracts (T-jr6-01)', () => {
+  it('does not throw on 401-shaped result (is_error:true, no structured_output) and returns empty findings', () => {
+    // This is the exact shape claude -p produces on a 401 auth failure:
+    // subtype 'success' with is_error:true, api_error_status:401, and EMPTY structured_output.
+    // The parser correctly returns findings:[] here -- which is exactly why pipeline.ts MUST
+    // gate on exitCode (assertProviderSucceeded) and NOT on parsed output to detect failures.
+    const stdout = JSON.stringify({
+      type: 'result',
+      subtype: 'success',
+      is_error: true,
+      api_error_status: 401,
+      result: 'Failed to authenticate. API Error: 401 Invalid bearer token',
+    });
+    expect(() => parseClaudeOutput(stdout, '')).not.toThrow();
+    const result = parseClaudeOutput(stdout, '');
+    // The parser sees no structured_output and falls through to the text fallback.
+    // The text fallback finds no finding-shaped lines, so findings is empty.
+    // This empty result is exactly why the pipeline must gate on exitCode, not on parsed output.
+    expect(Array.isArray(result.findings)).toBe(true);
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it('does not throw on completely empty stdout and returns empty findings', () => {
+    // claude -p with exit 1 and empty stdout (e.g. process killed before output).
+    expect(() => parseClaudeOutput('', '')).not.toThrow();
+    const result = parseClaudeOutput('', '');
+    expect(Array.isArray(result.findings)).toBe(true);
+    expect(result.findings).toHaveLength(0);
+  });
+});

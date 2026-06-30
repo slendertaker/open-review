@@ -410,6 +410,92 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('save strips internal whitespace from claudeOauthToken (T-jr6-03)', async () => {
+    // Simulate the live corruption: a token with two internal spaces injected mid-string.
+    const baseToken = 'sk-ant-oauthTOKENabcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJK';
+    const corruptedToken = baseToken.slice(0, 79) + '  ' + baseToken.slice(79);
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/dashboard/settings/secrets',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `claudeOauthToken=${encodeURIComponent(corruptedToken)}&_csrf=${encodeURIComponent(csrf)}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    // The stored value must have all whitespace removed
+    const stored = store.claudeOauthToken;
+    expect(stored).toBe(corruptedToken.replace(/\s+/g, ''));
+    // Sanity: the corruption was actually present in the input
+    expect(corruptedToken).toContain('  ');
+    // And is gone from the stored value
+    expect(stored).not.toContain(' ');
+  });
+
+  it('save strips internal whitespace from githubToken (T-jr6-03)', async () => {
+    const baseToken = 'ghp_testGithubPATtokenWithInternalSpaceInjected1234';
+    const corruptedToken = baseToken.slice(0, 10) + ' ' + baseToken.slice(10);
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/dashboard/settings/secrets',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `githubToken=${encodeURIComponent(corruptedToken)}&_csrf=${encodeURIComponent(csrf)}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const stored = store.githubToken;
+    expect(stored).toBe(corruptedToken.replace(/\s+/g, ''));
+    expect(stored).not.toContain(' ');
+  });
+
+  it('save preserves PEM newlines and spaces for githubAppPrivateKey (T-jr6-03)', async () => {
+    // A minimal fake PEM with real newlines and a space in the header line.
+    const fakePem = '-----BEGIN PRIVATE KEY-----\nline one with spaces inside\n-----END PRIVATE KEY-----';
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/dashboard/settings/secrets',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `githubAppPrivateKey=${encodeURIComponent(fakePem)}&_csrf=${encodeURIComponent(csrf)}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    // Read back via store getter (decrypts the stored value)
+    const stored = store.githubAppPrivateKey;
+    // The PEM must be stored byte-for-byte -- newlines and internal spaces intact
+    expect(stored).toBe(fakePem);
+    expect(stored).toContain('\n');
+    expect(stored).toContain('with spaces inside');
+  });
+
+  it('blank submit still preserves the existing token after whitespace-stripping change (T-jr6-03)', async () => {
+    // Pre-store a token directly (no whitespace -- already clean)
+    const originalToken = 'sk-ant-original-clean-token-abcdefgh1234';
+    setSecretRecord('claude_oauth_token', encryptSecret(originalToken, KEY));
+
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    // Submit with blank claudeOauthToken -- should preserve the existing stored value
+    const res = await server.inject({
+      method: 'POST',
+      url: '/dashboard/settings/secrets',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `claudeOauthToken=&_csrf=${encodeURIComponent(csrf)}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    // The store getter must still decrypt to the original value
+    expect(store.claudeOauthToken).toBe(originalToken);
+  });
+
   it('PEM private key shows (PEM key set) indicator when set', async () => {
     const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\n-----END RSA PRIVATE KEY-----';
     const encrypted = encryptSecret(pem, KEY);
