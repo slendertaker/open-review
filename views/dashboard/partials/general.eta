@@ -6,8 +6,8 @@
 
   <form
     hx-post="/dashboard/settings/general"
-    hx-target="#general-section"
-    hx-swap="outerHTML"
+    hx-target="#content"
+    hx-swap="innerHTML"
     style="max-width: 560px;"
   >
     <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
