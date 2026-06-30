@@ -1,0 +1,512 @@
+/* -------------------------------------------------------------------------
+ * Open Review - Dashboard Design System
+ * Dark-first token system (Vercel/Geist palette)
+ * Generated: Phase 6 Plan 02 -- do not hand-edit the token blocks.
+ * Component CSS below is moved verbatim from views/layout.eta.
+ * Compatibility alias block is TEMPORARY -- removed in Phase 8.
+ * ------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------
+ * Fonts (self-hosted, no outbound requests)
+ * ------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* -------------------------------------------------------------------------
+ * CSS reset supplement
+ * ------------------------------------------------------------------------- */
+
+input, button, textarea, select { font: inherit; }
+img, svg { display: block; }
+h1, h2, h3, h4, h5, h6 { text-wrap: balance; }
+
+/* -------------------------------------------------------------------------
+ * Dark token block (default -- no cookie = dark)
+ * D-01: exact dark palette. D-03: [data-theme] blocks.
+ * ------------------------------------------------------------------------- */
+
+:root,
+[data-theme="dark"] {
+  /* Color -- surface */
+  --color-bg:              #000000;
+  --color-surface:         #0a0a0a;
+  --color-surface-raised:  #111111;
+
+  /* Color -- text */
+  --color-text-primary:    #ededed;
+  --color-text-muted:      #a1a1a1;
+  --color-text-disabled:   #595959;
+
+  /* Color -- structure */
+  --color-border:          #2a2a2a;
+  --color-border-strong:   #3d3d3d;
+
+  /* Color -- accent */
+  --color-accent:          #0070f3;
+  --color-accent-subtle:   rgba(0, 112, 243, 0.12);
+
+  /* Color -- semantic */
+  --color-success:         #30d158;
+  --color-warning:         #ff9f0a;
+  --color-danger:          #ef4444;
+
+  /* Spacing (theme-independent, 4px base) */
+  --spacing-1:  4px;
+  --spacing-2:  8px;
+  --spacing-3:  12px;
+  --spacing-4:  16px;
+  --spacing-6:  24px;
+  --spacing-8:  32px;
+  --spacing-10: 40px;
+  --spacing-16: 64px;
+
+  /* Radius */
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+
+  /* -----------------------------------------------------------------------
+   * Compatibility aliases -- OLD OpenCode token names mapped to NEW tokens.
+   * Keeps ~40 untouched template inline styles rendering until Phase 8
+   * sweeps all templates. TEMPORARY: remove this block in Phase 8.
+   * DO NOT alias --color-fg or --color-error (never defined; fix at source).
+   * ----------------------------------------------------------------------- */
+  --color-ink:             var(--color-text-primary);
+  --color-ink-deep:        var(--color-text-primary);
+  --color-charcoal:        var(--color-text-primary);
+  --color-body:            var(--color-text-muted);
+  --color-mute:            var(--color-text-muted);
+  --color-ash:             var(--color-text-disabled);
+  --color-hairline:        var(--color-border);
+  --color-hairline-strong: var(--color-border-strong);
+  --color-canvas:          var(--color-bg);
+  --color-surface-soft:    var(--color-surface);
+  --color-surface-card:    var(--color-surface-raised);
+  --color-surface-dark:    #111111;
+  --spacing-xxs:           var(--spacing-1);
+  --spacing-xs:            var(--spacing-1);
+  --spacing-sm:            var(--spacing-2);
+  --spacing-md:            var(--spacing-3);
+  --spacing-lg:            var(--spacing-4);
+  --spacing-xl:            var(--spacing-6);
+  --spacing-xxl:           var(--spacing-8);
+  --spacing-section:       96px;
+  --rounded-sm:            var(--radius-sm);
+}
+
+/* -------------------------------------------------------------------------
+ * Light token override block
+ * D-03: [data-theme="light"] fully overrides surface/text/border/semantic.
+ * Spacing and radius are theme-independent -- not repeated here.
+ * ------------------------------------------------------------------------- */
+
+[data-theme="light"] {
+  /* Color -- surface */
+  --color-bg:              #fafafa;
+  --color-surface:         #ffffff;
+  --color-surface-raised:  #f5f5f5;
+
+  /* Color -- text */
+  --color-text-primary:    #171717;
+  --color-text-muted:      #4d4d4d;
+  --color-text-disabled:   #8f8f8f;
+
+  /* Color -- structure */
+  --color-border:          #ebebeb;
+  --color-border-strong:   #d4d4d4;
+
+  /* Color -- accent */
+  --color-accent:          #0070f3;
+  --color-accent-subtle:   rgba(0, 112, 243, 0.08);
+
+  /* Color -- semantic */
+  --color-success:         #16a34a;
+  --color-warning:         #d97706;
+  --color-danger:          #ef4444;
+
+  /* Compatibility aliases (light overrides) -- TEMPORARY: remove in Phase 8 */
+  --color-ink:             var(--color-text-primary);
+  --color-ink-deep:        var(--color-text-primary);
+  --color-charcoal:        var(--color-text-primary);
+  --color-body:            var(--color-text-muted);
+  --color-mute:            var(--color-text-muted);
+  --color-ash:             var(--color-text-disabled);
+  --color-hairline:        var(--color-border);
+  --color-hairline-strong: var(--color-border-strong);
+  --color-canvas:          var(--color-bg);
+  --color-surface-soft:    var(--color-surface);
+  --color-surface-card:    var(--color-surface-raised);
+  --color-surface-dark:    #e5e5e5;
+}
+
+/* -------------------------------------------------------------------------
+ * Global reset and typography
+ * (moved verbatim from views/layout.eta; old token names resolve via aliases)
+ * ------------------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Geist', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+code, pre, .font-mono {
+  font-family: 'Geist Mono', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+a {
+  color: var(--color-ink);
+  text-decoration: underline;
+}
+
+a:hover {
+  color: var(--color-charcoal);
+}
+
+/* -------------------------------------------------------------------------
+ * Typography utilities
+ * ------------------------------------------------------------------------- */
+
+.display-xl {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.heading-md {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.body-md {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.body-strong {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.button-md {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 2.0;
+}
+
+.caption-md {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 2.0;
+}
+
+/* -------------------------------------------------------------------------
+ * Button components
+ * ------------------------------------------------------------------------- */
+
+.btn-primary {
+  display: inline-block;
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 2.0;
+  padding: 8px 20px;
+  border-radius: var(--rounded-sm);
+  border: none;
+  cursor: pointer;
+  min-height: 36px;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: var(--color-charcoal);
+  color: var(--color-canvas);
+}
+
+.btn-primary:active {
+  background: var(--color-ink-deep);
+}
+
+.btn-secondary {
+  display: inline-block;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 2.0;
+  padding: 8px 20px;
+  border-radius: var(--rounded-sm);
+  border: 1px solid var(--color-hairline-strong);
+  cursor: pointer;
+  min-height: 36px;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface-soft);
+}
+
+.btn-disabled {
+  display: inline-block;
+  background: var(--color-surface-card);
+  color: var(--color-ash);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 2.0;
+  padding: 8px 20px;
+  border-radius: var(--rounded-sm);
+  border: none;
+  cursor: default;
+  min-height: 36px;
+}
+
+/* -------------------------------------------------------------------------
+ * Form components
+ * ------------------------------------------------------------------------- */
+
+.text-input {
+  display: block;
+  width: 100%;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 8px 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-sm);
+  min-height: 40px;
+  outline: none;
+}
+
+.text-input::placeholder {
+  color: var(--color-ash);
+}
+
+.text-input:focus {
+  background: var(--color-canvas);
+  border-color: var(--color-ink);
+}
+
+textarea.text-input {
+  resize: vertical;
+}
+
+select.text-input {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------------------
+ * List row (repositories)
+ * ------------------------------------------------------------------------- */
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------------------
+ * Flash messages
+ * ------------------------------------------------------------------------- */
+
+.flash-success {
+  display: block;
+  color: var(--color-success);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 2.0;
+  margin-top: var(--spacing-sm);
+}
+
+.flash-error {
+  display: block;
+  color: var(--color-danger);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 2.0;
+  margin-top: var(--spacing-sm);
+}
+
+.flash-warning {
+  display: block;
+  color: var(--color-warning);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 2.0;
+  margin-top: var(--spacing-sm);
+}
+
+/* -------------------------------------------------------------------------
+ * Secret preview pill
+ * ------------------------------------------------------------------------- */
+
+.secret-preview {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 2.0;
+  color: var(--color-ash);
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-surface-card);
+  border-radius: var(--rounded-sm);
+  font-family: inherit;
+}
+
+/* -------------------------------------------------------------------------
+ * Section header
+ * ------------------------------------------------------------------------- */
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.section-header .bracket-prefix {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-mute);
+}
+
+/* -------------------------------------------------------------------------
+ * Nav strip
+ * ------------------------------------------------------------------------- */
+
+.nav-strip {
+  height: 48px;
+  border-bottom: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-xl);
+}
+
+/* -------------------------------------------------------------------------
+ * Content column
+ * ------------------------------------------------------------------------- */
+
+.content-column {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--spacing-xxl) var(--spacing-xl);
+}
+
+/* -------------------------------------------------------------------------
+ * Centered card (login / setup)
+ * ------------------------------------------------------------------------- */
+
+.centered-card-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.centered-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--spacing-xxl);
+  border: 1px solid var(--color-hairline);
+  border-radius: 0;
+  background: var(--color-canvas);
+}
+
+/* -------------------------------------------------------------------------
+ * Responsive breakpoints
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .content-column {
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
+}
+
+@media (max-width: 640px) {
+  .display-xl {
+    font-size: 22px;
+  }
+
+  .content-column {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    display: block;
+    text-align: center;
+    min-height: 44px;
+  }
+
+  .centered-card {
+    max-width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Icon spinner (used by icons.eta loader icon)
+ * D-07: reduced-motion honored.
+ * ------------------------------------------------------------------------- */
+
+.icon-spin { animation: spin 1s linear infinite; }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-spin { animation: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root { transition: background-color 150ms ease, color 150ms ease; }
+}
