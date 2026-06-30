@@ -4,7 +4,7 @@
     <p class="body-md" style="color: var(--color-text-muted); margin-top: var(--spacing-2);">Create a password to protect the dashboard.</p>
 
     <% if (it.tokenValid) { %>
-      <div style="margin-top: 96px;">
+      <div style="margin-top: var(--spacing-24);">
         <form method="POST" action="/setup">
           <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
           <input type="hidden" name="token" value="<%= it.token %>">
@@ -21,17 +21,17 @@
           </div>
 
           <div style="margin-top: var(--spacing-3);">
-            <button type="submit" class="btn-primary" style="width: 100%;">Set password</button>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Set password</button>
           </div>
 
           <% if (it.error) { %>
-            <p class="flash-error" role="alert" style="display:flex;align-items:flex-start;gap:6px;"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span><%= it.error %></p>
+            <p class="flash-error" role="alert"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span><%= it.error %></p>
           <% } %>
         </form>
       </div>
     <% } else { %>
-      <div style="margin-top: 96px;">
-        <p class="flash-error" role="alert" style="display:flex;align-items:flex-start;gap:6px;"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span>This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
+      <div style="margin-top: var(--spacing-24);">
+        <p class="flash-error" role="alert"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span>This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
       </div>
     <% } %>
   </div>
