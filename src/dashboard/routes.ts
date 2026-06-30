@@ -28,6 +28,16 @@ type Rep = any;
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
 
+// Reads or_theme cookie and BUILD_VERSION for every full-page render.
+// @fastify/cookie (registered in server.ts) populates req.cookies.
+export function viewGlobals(req: Req): Record<string, unknown> {
+  const theme = (req.cookies as Record<string, string> | undefined)?.['or_theme'] === 'light'
+    ? 'light'
+    : 'dark';
+  const cssVersion = process.env['BUILD_VERSION'] ?? 'dev';
+  return { theme, cssVersion };
+}
+
 export async function registerDashboardRoutes(
   fastify: AnyFastify,
   store: ConfigStore,
@@ -55,6 +65,7 @@ export async function registerDashboardRoutes(
     const showNoDomainBanner = !store.domain && req.protocol === 'http';
 
     return reply.viewAsync('login', {
+      ...viewGlobals(req),
       title: 'Sign in - Open Review',
       csrfToken,
       flashError: flashError ?? null,
@@ -85,6 +96,7 @@ export async function registerDashboardRoutes(
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/index', {
+      ...viewGlobals(req),
       title: 'Settings - Open Review',
       csrfToken,
       // Pass current config values for the section partials.

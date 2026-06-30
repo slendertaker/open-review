@@ -8,6 +8,7 @@
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
 import { requireLogin } from './auth.js';
+import { viewGlobals } from './routes.js';
 import {
   getReviewRunPage,
   getReviewRunById,
@@ -42,6 +43,7 @@ export async function registerActivityRoutes(
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/activity', {
+      ...viewGlobals(req),
       title: 'Activity - Open Review',
       csrfToken,
       rows,
@@ -79,6 +81,7 @@ export async function registerActivityRoutes(
     // errors must render an HTML dashboard page rather than a raw JSON blob.
     if (!Number.isFinite(id) || id <= 0) {
       return reply.code(400).viewAsync('dashboard/error', {
+        ...viewGlobals(req),
         title: 'Bad request - Open Review',
         heading: 'Bad request',
         message: 'Invalid review run id.',
@@ -88,6 +91,7 @@ export async function registerActivityRoutes(
     const run = getReviewRunById(id);
     if (!run) {
       return reply.code(404).viewAsync('dashboard/error', {
+        ...viewGlobals(req),
         title: 'Not found - Open Review',
         heading: 'Not found',
         message: 'Review run not found.',
@@ -106,6 +110,7 @@ export async function registerActivityRoutes(
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/activity-detail', {
+      ...viewGlobals(req),
       title: `Review #${run.id} - Open Review`,
       csrfToken,
       run,
