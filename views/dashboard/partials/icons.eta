@@ -1,8 +1,4 @@
-<%# Inline SVG icon partial -- no external requests, no icon fonts.
-<%# Usage: <%~ include('./icons', { name: 'check' }) %>
-<%# Valid names: check | x | loader | alert
-<%# All icons: width=14 height=14 stroke=currentColor aria-hidden=true
-<%# The loader icon carries class="icon-spin" (see dashboard.css @keyframes spin)
+<% /* Inline SVG icon partial: include with { name: 'check' | 'x' | 'loader' | 'alert' }; 14x14, stroke=currentColor, aria-hidden; loader carries class="icon-spin". */ %>
 <% if (it.name === 'check') { %>
 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 <% } else if (it.name === 'x') { %>
