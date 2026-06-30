@@ -30,9 +30,17 @@ export function renderCaddyfile(domain: string | undefined, port: number): strin
  * needed. Throws on any non-2xx response so the caller can catch and flash.
  */
 export async function reloadCaddy(caddyfileText: string): Promise<void> {
+  // The Origin header is required. Caddy's admin API enforces a cross-origin
+  // (DNS-rebinding) guard: a request whose Origin is absent-but-empty is rejected
+  // with 403 "client is not allowed to access from origin ''". Node's global fetch
+  // (undici) sends an empty Origin, unlike curl which sends none, so we set it
+  // explicitly to the loopback admin endpoint, which Caddy allows.
   const res = await fetch('http://127.0.0.1:2019/load', {
     method: 'POST',
-    headers: { 'Content-Type': 'text/caddyfile' },
+    headers: {
+      'Content-Type': 'text/caddyfile',
+      Origin: 'http://127.0.0.1:2019',
+    },
     body: caddyfileText,
   });
   if (!res.ok) {

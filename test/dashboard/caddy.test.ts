@@ -1,13 +1,13 @@
 /**
- * Unit tests for the pure renderCaddyfile helper in src/dashboard/caddy.ts.
+ * Unit tests for renderCaddyfile and reloadCaddy in src/dashboard/caddy.ts.
  *
- * reloadCaddy and applyDomain are NOT unit-tested here: they require a live
- * Caddy admin socket and root access to /etc/caddy/Caddyfile. Those are
- * validated manually on the VPS at verify time.
+ * applyDomain is NOT unit-tested here: it writes /etc/caddy/Caddyfile (root path)
+ * and is validated on the VPS at verify time. reloadCaddy IS tested with a mocked
+ * fetch to guard the Caddy admin-API contract (notably the required Origin header).
  */
 
-import { describe, it, expect } from 'vitest';
-import { renderCaddyfile } from '../../src/dashboard/caddy.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { renderCaddyfile, reloadCaddy } from '../../src/dashboard/caddy.js';
 
 // Reference the em-dash glyph via a constant so this test file cannot flag
 // itself in any future em-dash scan.
@@ -55,5 +55,38 @@ describe('renderCaddyfile', () => {
   it('port is interpolated correctly for non-default ports', () => {
     const out = renderCaddyfile('example.com', 8080);
     expect(out).toContain('reverse_proxy 127.0.0.1:8080');
+  });
+});
+
+describe('reloadCaddy', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('POSTs to the admin /load endpoint with an Origin header (Caddy rejects an empty Origin with 403)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await reloadCaddy(':80 {\n    reverse_proxy 127.0.0.1:3000\n}\n');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://127.0.0.1:2019/load');
+    expect(init.method).toBe('POST');
+    const headers = init.headers as Record<string, string>;
+    expect(headers['Content-Type']).toBe('text/caddyfile');
+    // The Origin header is the fix: without it Caddy's admin API returns 403.
+    expect(headers.Origin).toBe('http://127.0.0.1:2019');
+  });
+
+  it('throws when Caddy returns a non-2xx status', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => '{"error":"client is not allowed to access from origin \'\'"}',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(reloadCaddy(':80 {\n}\n')).rejects.toThrow(/403/);
   });
 });
