@@ -1,4 +1,4 @@
-<section id="repos-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="repos-section" class="section-card">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Repositories</h2>
@@ -6,24 +6,35 @@
 
   <div style="max-width: 560px;">
 
-    <!-- Repo allowlist rows -->
+    <!-- Repo allowlist card grid -->
     <% if (it.repos && it.repos.length > 0) { %>
+    <div class="card-repo-grid">
       <% it.repos.forEach(function(repo) { %>
-      <div data-repo-row style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-2) 0; border-bottom: 1px solid var(--color-border);">
-        <span class="body-md" style="color: var(--color-text-muted);"><span style="color: var(--color-text-muted);">[-]</span> <%= repo %></span>
-        <form
-          hx-delete="/dashboard/repos/<%= encodeURIComponent(repo) %>"
-          hx-target="#content"
-          hx-swap="innerHTML"
-          style="display: inline;"
-        >
-          <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
-          <button type="submit" class="caption-md" style="color: var(--color-danger); background: none; border: none; cursor: pointer; padding: 0; display:inline-flex;align-items:center;gap:2px;"><%~ include('./icons', { name: 'x' }) %> remove</button>
-        </form>
+      <div class="card-repo" data-repo-row>
+        <div style="display: flex; align-items: center; gap: var(--spacing-2);">
+          <span class="status-dot status-dot--active"></span>
+          <span class="body-md" style="font-family: 'Geist Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><%= repo %></span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span class="badge badge--success">Active</span>
+          <form
+            hx-delete="/dashboard/repos/<%= encodeURIComponent(repo) %>"
+            hx-target="#content"
+            hx-swap="innerHTML"
+            style="display: inline;"
+          >
+            <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+            <button type="submit" class="btn btn-ghost" style="color: var(--color-danger);">Remove</button>
+          </form>
+        </div>
       </div>
       <% }); %>
+    </div>
     <% } else { %>
-      <p class="body-md" style="color: var(--color-text-muted); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories configured. Add a repository below to start receiving reviews.</p>
+    <div class="empty-state">
+      <%~ include('./icons', { name: 'x' }) %>
+      <p class="body-md">No repositories configured. Add a repository below to start receiving reviews.</p>
+    </div>
     <% } %>
 
     <!-- Add repo row -->
@@ -46,7 +57,7 @@
           aria-label="Repository in owner/repo format"
         >
       </div>
-      <button type="submit" class="btn-secondary" style="white-space: nowrap;">[ add ]</button>
+      <button type="submit" class="btn btn-secondary" style="white-space: nowrap;">Add</button>
     </form>
 
     <!-- Flash region -->
