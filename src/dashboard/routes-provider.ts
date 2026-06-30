@@ -14,10 +14,11 @@
 
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
-import { setSetting } from '../state/config-state.js';
+import { setSetting, getSetting } from '../state/config-state.js';
 import { maskSecret } from '../config/crypto.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
+import { viewGlobals } from './routes.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -31,6 +32,37 @@ export async function registerProviderRoutes(
   store: ConfigStore,
   _db: Database.Database,
 ): Promise<void> {
+  // -------------------------------------------------------------------------
+  // GET /settings/provider -- hybrid: fragment (HX-Request) or full shell
+  // -------------------------------------------------------------------------
+  fastify.get('/settings/provider', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
+    const csrfToken = await reply.generateCsrf(); // ALWAYS first, both paths (D-07)
+    const sectionData = { ...buildProviderViewData(store), csrfToken };
+
+    const isHtmx = req.headers['hx-request'] === 'true'
+      && req.headers['hx-history-restore-request'] !== 'true';
+
+    if (isHtmx) {
+      return reply.code(200).viewAsync('dashboard/partials/provider', sectionData);
+    }
+
+    // Pre-render partials to strings (fastify.view = string renderer, no reply.send)
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/provider', sectionData);
+    const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/sidebar-context', {
+      github_app_slug: getSetting('github_app_slug'),
+      github_app_name: getSetting('github_app_name'),
+      repos: store.repos,
+    });
+    return reply.viewAsync('shell', {
+      ...viewGlobals(req),
+      title: 'Provider - Open Review',
+      activeSection: 'provider',
+      sectionContent,
+      sidebarContext,
+      csrfToken,
+    }, { layout: 'layout.eta' });
+  });
+
   fastify.post(
     '/dashboard/settings/provider',
     { preHandler: [requireLogin, fastify.csrfProtection] },

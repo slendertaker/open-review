@@ -1,9 +1,3 @@
-<%#
-  shell.eta - Persistent sidebar shell
-  Rendered inside layout.eta via { layout: 'layout.eta' } on every full-page load.
-  The sidebar is a SIBLING of #content -- never nested inside it.
-  htmx swaps target #content (innerHTML); the sidebar is never re-rendered on nav.
-%>
 <div class="app-shell">
   <aside
     class="sidebar"
@@ -19,13 +13,11 @@
       <span class="body-strong">Open Review</span>
     </div>
 
-    <%# D-05: pre-rendered context block on full-shell load; OOB target for live updates %>
     <div id="sidebar-context">
       <%~ it.sidebarContext %>
     </div>
 
     <nav id="sidebar-nav">
-      <%# Activity group %>
       <div class="sidebar-group">
         <a
           href="/activity"
@@ -38,9 +30,6 @@
         >Activity</a>
       </div>
 
-      <%# Settings group - explicit links so label capitalization is unambiguous.
-          The GitHub label MUST render as "GitHub" (capital H), not "Github".
-          Labels: General, Provider, Secrets, GitHub, Repos, Access, Health. %>
       <div class="sidebar-group">
         <span class="sidebar-group-label caption-md">Settings</span>
         <a
@@ -129,8 +118,6 @@
   </main>
 </div>
 
-<%# Pitfall 1 mitigation: prevent history cache-miss from injecting bare fragment into body.
-    Set after htmx loads (deferred scripts), so listen for htmx:ready. %>
 <script>
 document.addEventListener('htmx:ready', function() {
   htmx.config.historyRestoreAsHxRequest = false;

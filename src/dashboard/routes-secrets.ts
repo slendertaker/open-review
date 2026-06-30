@@ -27,11 +27,12 @@
 
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
-import { setSetting, setSecretRecord, getSecretRecord } from '../state/config-state.js';
+import { setSetting, setSecretRecord, getSecretRecord, getSetting } from '../state/config-state.js';
 import { encryptSecret, decryptSecret, maskSecret } from '../config/crypto.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
 import { log, scrub } from '../logger.js';
+import { viewGlobals } from './routes.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -72,6 +73,38 @@ export async function registerSecretsRoutes(
   store: ConfigStore,
   _db: Database.Database,
 ): Promise<void> {
+  // -------------------------------------------------------------------------
+  // GET /settings/secrets -- hybrid: fragment (HX-Request) or full shell
+  // -------------------------------------------------------------------------
+  fastify.get('/settings/secrets', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
+    const csrfToken = await reply.generateCsrf(); // ALWAYS first, both paths (D-07)
+    const machineKey = await getMachineKey();
+    const sectionData = { ...buildSecretsViewData(store, machineKey), csrfToken };
+
+    const isHtmx = req.headers['hx-request'] === 'true'
+      && req.headers['hx-history-restore-request'] !== 'true';
+
+    if (isHtmx) {
+      return reply.code(200).viewAsync('dashboard/partials/secrets', sectionData);
+    }
+
+    // Pre-render partials to strings (fastify.view = string renderer, no reply.send)
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/secrets', sectionData);
+    const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/sidebar-context', {
+      github_app_slug: getSetting('github_app_slug'),
+      github_app_name: getSetting('github_app_name'),
+      repos: store.repos,
+    });
+    return reply.viewAsync('shell', {
+      ...viewGlobals(req),
+      title: 'Secrets - Open Review',
+      activeSection: 'secrets',
+      sectionContent,
+      sidebarContext,
+      csrfToken,
+    }, { layout: 'layout.eta' });
+  });
+
   fastify.post(
     '/dashboard/settings/secrets',
     { preHandler: [requireLogin, fastify.csrfProtection] },

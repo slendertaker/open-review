@@ -1,10 +1,3 @@
-<%#
-  sidebar-context.eta - GitHub connection status and repo count
-  Bare fragment: no wrapper div. The container element comes from:
-    - shell.eta wraps this in a #sidebar-context div on full-shell load
-    - OOB wrapper emitted by GitHub and Repos routes on htmx fragment responses
-  Data keys: it.github_app_slug (truthy = connected), it.github_app_name, it.repos (array)
-%>
 <% var connected = !!it.github_app_slug; %>
 <% var repoCount = (it.repos || []).length; %>
 <span class="status-dot <%~ connected ? 'status-dot--success' : 'status-dot--muted' %>"></span>
