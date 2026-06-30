@@ -389,6 +389,38 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     expect(enqueueCalls).toHaveLength(0);
   });
 
+  // Wave 0 RED: green after Plan 04
+  it('GET /activity renders the activity feed as a <table> (ACT-01)', async () => {
+    const cookie = await login();
+
+    insertReviewRun({ repo: 'testrepo', prNumber: 42 });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/activity',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body as string).toContain('<table');
+  });
+
+  // Wave 0 RED: green after Plan 04
+  it('GET /activity renders a status badge span (CMP-03)', async () => {
+    const cookie = await login();
+
+    insertReviewRun({ repo: 'testrepo', prNumber: 42 });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/activity',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body as string).toContain('class="badge');
+  });
+
   // DACT-04 + JobPayload optionality: PAT mode omits installationId
   it('POST /activity/:id/retrigger omits installationId from the payload when the stored row has installation_id NULL', async () => {
     const cookie = await login();

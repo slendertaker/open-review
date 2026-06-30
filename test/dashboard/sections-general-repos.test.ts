@@ -445,4 +445,26 @@ describe('Repositories section (DCFG-03, DCFG-05) -- Plan 03', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('No repositories configured');
   });
+
+  // Wave 0 RED: green after Plan 05
+  it('GET /settings/repos renders repos as a .card-repo-grid (ACT-03)', async () => {
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    await server.inject({
+      method: 'POST',
+      url: '/dashboard/repos',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `_csrf=${encodeURIComponent(csrf)}&repo=myorg%2Fmyrepo`,
+    });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/repos',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('card-repo-grid');
+  });
 });

@@ -608,3 +608,55 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     expect(res.headers['location']).toContain('/login');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Wave 0 RED: Onboarding steps surface (ONB-01) -- green after Plan 05
+// ---------------------------------------------------------------------------
+
+describe('github settings page onboarding steps (ONB-01)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any;
+
+  beforeEach(async () => {
+    const db = openDb(':memory:');
+    const store = new SqliteConfigStore(db, makeKey());
+    const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
+    setSetting('password_hash', hash);
+    // Do NOT seed github_app_slug -- testing the not-connected state
+    server = await buildServer(store, db, () => {}, makeKey());
+    lockoutMap.clear();
+    createFromManifestMock.mockClear();
+    paginateMock.mockClear();
+  });
+
+  afterEach(async () => {
+    await server.close();
+    lockoutMap.clear();
+  });
+
+  async function login(): Promise<string> {
+    const getRes = await server.inject({ method: 'GET', url: '/login' });
+    const csrf = extractCsrf(getRes.body as string);
+    const loginRes = await server.inject({
+      method: 'POST',
+      url: '/login',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: cookieHeader(getRes) },
+      payload: `password=${encodeURIComponent(PASSWORD)}&_csrf=${encodeURIComponent(csrf)}`,
+    });
+    return cookieHeader(loginRes);
+  }
+
+  // Wave 0 RED: green after Plan 05
+  it('GET /settings/github renders .onboarding-steps when not connected (ONB-01)', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/github',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('onboarding-steps');
+  });
+});
