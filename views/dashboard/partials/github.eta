@@ -37,8 +37,8 @@
     <p style="margin-bottom: var(--spacing-md);">
       <a
         hx-get="/dashboard/github/refresh"
-        hx-target="#github-section"
-        hx-swap="outerHTML"
+        hx-target="#content"
+        hx-swap="innerHTML"
         style="cursor: pointer; color: var(--color-mute);"
         class="caption-md"
       >[ Refresh installations and repositories ]</a>
@@ -72,8 +72,8 @@
               <!-- Toggle form: flips enabled state. enabled value is the OPPOSITE of current. -->
               <form
                 hx-post="/dashboard/github/repos/<%= encodeURIComponent(repo.fullName) %>/toggle"
-                hx-target="#github-section"
-                hx-swap="outerHTML"
+                hx-target="#content"
+                hx-swap="innerHTML"
                 style="display: inline;"
               >
                 <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
