@@ -510,3 +510,114 @@ select.text-input {
 @media (prefers-reduced-motion: no-preference) {
   :root { transition: background-color 150ms ease, color 150ms ease; }
 }
+
+/* -------------------------------------------------------------------------
+ * Sidebar shell (Phase 7 CSS gap, Phase 8 fill)
+ * CMP-03 / D-06: classes referenced by views/shell.eta and sidebar-context.eta
+ * but missing from dashboard.css until this plan.
+ * Canonical tokens only -- no compat aliases.
+ * ------------------------------------------------------------------------- */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-4) 0;
+}
+
+.sidebar-brand {
+  padding: 0 var(--spacing-4) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-3);
+}
+
+.sidebar-group {
+  padding: var(--spacing-2) 0;
+}
+
+.sidebar-group-label {
+  display: block;
+  padding: var(--spacing-2) var(--spacing-4);
+  color: var(--color-text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-item {
+  display: block;
+  padding: var(--spacing-2) var(--spacing-4);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  margin: 0 var(--spacing-2);
+}
+
+.nav-item:hover,
+.nav-item--active {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.content-panel {
+  flex: 1;
+  min-width: 0;
+  padding: var(--spacing-8) var(--spacing-6);
+  overflow-y: auto;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1);
+  border-radius: var(--radius-sm);
+}
+
+.theme-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+/* Status dots (D-06; used by sidebar-context.eta) */
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot--active,
+.status-dot--success {
+  background: var(--color-success);
+}
+
+.status-dot--inactive,
+.status-dot--muted {
+  background: var(--color-text-disabled);
+}
+
+.status-dot--warning {
+  background: var(--color-warning);
+}
