@@ -55,11 +55,11 @@ export async function registerActivityRoutes(
 
   // -------------------------------------------------------------------------
   // GET /activity/partial -- htmx partial (T-03-04: requires login)
-  // Returns the feed rows partial + OOB health panel for 5s polling swaps.
+  // Returns the feed rows partial. Health is decoupled (D-06) and lives on
+  // its own poll at /settings/health/partial.
   // -------------------------------------------------------------------------
   fastify.get('/activity/partial', { preHandler: requireLogin }, async (_req: Req, reply: Rep) => {
     const rows = getReviewRunPage(PAGE_SIZE, 0);
-    const health = await computeHealthData(db, store);
     const csrfToken = await reply.generateCsrf();
 
     return reply.viewAsync('dashboard/partials/activity-list', {
@@ -67,7 +67,6 @@ export async function registerActivityRoutes(
       page: 0,
       pageSize: PAGE_SIZE,
       csrfToken,
-      health,
     });
   });
 
