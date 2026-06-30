@@ -394,6 +394,9 @@ export async function registerGithubRoutes(
         // it via ConfigStore.githubAppId -> readSecret('github_app_id') (matching the
         // manual/Advanced path), so the settings copy above is invisible to it. Without
         // this, a manifest-connected App fails every review with "No GitHub auth available".
+        // Note: String(data.id) is a numeric App ID -- whitespace-free by construction.
+        // Do NOT copy the routes-secrets.ts WHITESPACE_FREE_FIELDS stripping onto the
+        // data.pem or data.client_secret fields below; PEMs contain legitimate newlines.
         setSecretRecord('github_app_id', encryptSecret(String(data.id), machineKey));
 
         // webhook_secret: persist only when truthy -- the type is string | null

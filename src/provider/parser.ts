@@ -178,6 +178,11 @@ export function parseClaudeOutput(stdout: string, _stderr: string): ParsedOutput
     return { findings: parseFindingsFromText(stdout), summary: extractSummary(stdout) };
   }
 
+  // out.exitCode in the pipeline is the AUTHORITATIVE failure signal (T-jr6-01).
+  // A 401 auth failure returns subtype 'success' with is_error:true / api_error_status:401
+  // but EMPTY structured_output -- so it never reaches the branch below and falls through
+  // to the empty-text fallback instead. That is exactly why pipeline.ts must gate on
+  // exitCode (via assertProviderSucceeded) and NOT on parsed output.
   const so = parsed['structured_output'];
   if (parsed['subtype'] === 'success' && so !== null && typeof so === 'object') {
     const output = so as Record<string, unknown>;

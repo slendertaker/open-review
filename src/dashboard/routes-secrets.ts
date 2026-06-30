@@ -100,10 +100,25 @@ export async function registerSecretsRoutes(
           ['githubToken', 'github_token'],
         ];
 
+        // Token fields are whitespace-free by definition (T-jr6-03).
+        // Strip ALL internal whitespace on save so a corrupted-on-copy token with
+        // stray spaces cannot quietly break auth (reproduces the live 401 incident).
+        // github_app_private_key is a PEM with legitimate newlines and internal spaces
+        // and is explicitly excluded from stripping -- only trim() applies to it.
+        const WHITESPACE_FREE_FIELDS = new Set([
+          'claudeOauthToken',
+          'anthropicApiKey',
+          'githubAppId',
+          'githubToken',
+        ]);
+
         for (const [fieldName, secretName] of secretFields) {
           const value = body[fieldName];
           if (value && value.trim() !== '') {
-            setSecretRecord(secretName, encryptSecret(value.trim(), machineKey));
+            const stored = WHITESPACE_FREE_FIELDS.has(fieldName)
+              ? value.replace(/\s+/g, '')
+              : value.trim();
+            setSecretRecord(secretName, encryptSecret(stored, machineKey));
           }
           // blank = preserve existing (write-only, D2-06)
         }
