@@ -3,6 +3,16 @@
   <a href="/activity" class="body-md" style="color: var(--color-text-primary);">Activity</a>
   <a href="/dashboard" class="body-md" style="color: var(--color-mute);">Settings</a>
   <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+  <button
+    type="button"
+    aria-label="Toggle color theme"
+    style="background:none;border:none;cursor:pointer;padding:0;color:var(--color-text-muted);display:inline-flex;align-items:center;"
+    @click="
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      document.cookie = 'or_theme=' + next + '; Path=/; SameSite=Lax; Max-Age=31536000';
+    "
+  ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
 </nav>
 
 <main class="content-column">
