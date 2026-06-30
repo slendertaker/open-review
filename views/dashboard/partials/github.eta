@@ -1,4 +1,4 @@
-<section id="github-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="github-section" class="section-card">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">GitHub</h2>
@@ -6,6 +6,10 @@
 
   <% if (it.flash) { %>
   <%~ it.flash %>
+  <% } %>
+
+  <% if (!it.manifestMode) { %>
+  <%~ include('./onboarding-steps', { onboardingStep: it.onboardingStep }) %>
   <% } %>
 
   <% if (it.manifestMode) { %>
@@ -39,9 +43,9 @@
         hx-get="/dashboard/github/refresh"
         hx-target="#content"
         hx-swap="innerHTML"
-        style="cursor: pointer; color: var(--color-text-muted);"
-        class="caption-md"
-      >[ Refresh installations and repositories ]</a>
+        style="cursor: pointer;"
+        class="btn btn-ghost caption-md"
+      >Refresh installations and repositories</a>
     </p>
 
     <!-- Installations/repo groups (D5-05, SC-3) -->
@@ -78,8 +82,8 @@
               >
                 <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
                 <input type="hidden" name="enabled" value="<%= repo.enabled ? '0' : '1' %>">
-                <button type="submit" class="caption-md" style="background: none; border: none; cursor: pointer; padding: 0; color: var(--color-text-muted);">
-                  <% if (repo.enabled) { %>[ disable ]<% } else { %>[ enable ]<% } %>
+                <button type="submit" class="btn btn-ghost caption-md">
+                  <% if (repo.enabled) { %>Disable<% } else { %>Enable<% } %>
                 </button>
               </form>
             </div>
@@ -95,7 +99,7 @@
         <%~ include('./icons', { name: 'x' }) %> No installations found. Install the App on your personal account or organization to start selecting repositories.
       </p>
       <p>
-        <a href="/dashboard/github/install" class="btn-secondary">[ Install GitHub App ]</a>
+        <a href="/dashboard/github/install" class="btn btn-secondary">Install GitHub App</a>
       </p>
       <% } %>
     </div>
@@ -133,7 +137,7 @@
           autocomplete="off"
         >
       </div>
-      <button type="submit" class="btn-secondary">[ Connect GitHub ]</button>
+      <button type="submit" class="btn btn-primary">Connect GitHub</button>
     </form>
   </div>
   <% } %>
