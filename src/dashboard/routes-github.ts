@@ -390,6 +390,12 @@ export async function registerGithubRoutes(
         setSecretRecord('github_app_private_key', encryptSecret(data.pem, machineKey));
         setSecretRecord('github_client_secret', encryptSecret(data.client_secret, machineKey));
 
+        // Also persist github_app_id into the secrets store. The review runner reads
+        // it via ConfigStore.githubAppId -> readSecret('github_app_id') (matching the
+        // manual/Advanced path), so the settings copy above is invisible to it. Without
+        // this, a manifest-connected App fails every review with "No GitHub auth available".
+        setSecretRecord('github_app_id', encryptSecret(String(data.id), machineKey));
+
         // webhook_secret: persist only when truthy -- the type is string | null
         // and storing null would break HMAC verification (Pitfall 1, T-05-09).
         if (data.webhook_secret) {

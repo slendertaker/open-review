@@ -135,6 +135,11 @@ describe('dashboard auth (DSEC-01) -- Plan 02', () => {
     for (const section of ['General', 'Repositories', 'Provider', 'Secrets', 'Access']) {
       expect(res.body).toContain(section);
     }
+    // Regression: the GitHub section must lazy-load its connected/not-connected state
+    // via htmx on page load. Without this, the main page always shows the static
+    // not-connected branch even when an App is connected, so repo selection is unreachable.
+    expect(res.body).toContain('hx-get="/dashboard/github"');
+    expect(res.body).toContain('hx-trigger="load"');
   });
 
   it('session id is regenerated after login (session fixation prevention)', async () => {

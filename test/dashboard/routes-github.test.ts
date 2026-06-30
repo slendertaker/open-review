@@ -376,6 +376,31 @@ describe('github callback persistence (SC-1, SC-4, D5-03)', () => {
     // The raw stored value must NOT be the plaintext PEM (it's encrypted)
     expect(record).not.toContain('PRIVATE KEY');
   });
+
+  it('callback persists github_app_id into the secrets store so the runner resolves App-mode auth', async () => {
+    // Regression: the runner reads ConfigStore.githubAppId -> readSecret('github_app_id').
+    // The manifest callback previously wrote app_id only to the settings table, which the
+    // runner never reads, so every review failed with "No GitHub auth available".
+    const cookie = await login();
+
+    const connectRes = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/connect',
+      headers: { cookie },
+    });
+    const stateToken = /state=([a-f0-9]+)/.exec(connectRes.body as string)![1]!;
+
+    await server.inject({
+      method: 'GET',
+      url: `/dashboard/github/callback?code=test-code-abc&state=${stateToken}`,
+      headers: { cookie },
+    });
+
+    // app_id must be present in the secrets store as an encrypted record (ivHex:tagHex:ciphertext)
+    const record = getSecretRecord('github_app_id');
+    expect(record).not.toBeUndefined();
+    expect((record as string).split(':')).toHaveLength(3);
+  });
 });
 
 // ---------------------------------------------------------------------------

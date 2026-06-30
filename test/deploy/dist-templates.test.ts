@@ -15,12 +15,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { Eta } from 'eta';
 
 const REPO_ROOT = process.cwd();
+const SRC_PARTIALS = path.resolve(REPO_ROOT, 'views/dashboard/partials');
 const DIST_VIEWS = path.resolve(REPO_ROOT, 'dist/views');
+const DIST_PARTIALS = path.resolve(DIST_VIEWS, 'dashboard/partials');
 const DIST_PUBLIC_VENDOR = path.resolve(REPO_ROOT, 'dist/public/vendor');
 
 describe('DEPL-02 dist/ template build-output guard', () => {
@@ -34,6 +36,25 @@ describe('DEPL-02 dist/ template build-output guard', () => {
       existsSync(DIST_PUBLIC_VENDOR),
       'dist/public/vendor not found -- run `npm run build` (the deployed dist/ layout the runtime serves static assets from must contain public/)',
     ).toBe(true);
+  });
+
+  it('build is idempotent: every source dashboard partial reaches the canonical dist path and dist/views is not nested', () => {
+    // Regression guard for the non-idempotent `cp -r views dist/views` defect:
+    // on an in-place rebuild, `cp -r` nested a fresh copy under dist/views/views/
+    // and left the canonical dist/views/dashboard/partials/ stale, so newly added
+    // partials (e.g. github.eta) 500ed at runtime while layout.eta still resolved.
+    expect(
+      existsSync(path.join(DIST_VIEWS, 'views')),
+      'dist/views/views exists -- the build copied views/ INTO an existing dist/views (non-idempotent cp). The build must purge dist/views before copying.',
+    ).toBe(false);
+
+    const srcPartials = readdirSync(SRC_PARTIALS).filter((f) => f.endsWith('.eta'));
+    for (const partial of srcPartials) {
+      expect(
+        existsSync(path.join(DIST_PARTIALS, partial)),
+        `dist/views/dashboard/partials/${partial} not found -- the built artifact the runtime renders is missing a source partial (stale/nested dist copy).`,
+      ).toBe(true);
+    }
   });
 
   it('layout.eta renders from the built dist/ output', async () => {
