@@ -48,6 +48,7 @@ import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
 import { log, scrub } from '../logger.js';
 import { appLevelOctokit, installationOctokit, unauthOctokit } from '../github/app.js';
+import { viewGlobals } from './routes.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -548,6 +549,93 @@ export async function registerGithubRoutes(
         installGroups,
         flash,
       });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /settings/github -- hybrid: fragment (HX-Request) or full shell
+  //
+  // NAV-02: fragment path appends OOB #sidebar-context AFTER the primary
+  // section content (htmx 2.x ordering rule). The OOB div updates the
+  // sidebar connection status live without a full reload.
+  // NAV-03: the /settings/github path is the new navigation destination.
+  // NAV-04: bookmarkable -- direct load returns the full sidebar shell.
+  // D-07:   reply.generateCsrf() is the FIRST line on both paths.
+  //
+  // NOTE: the /dashboard/github and /dashboard/github/* App-Manifest flow
+  // routes are left completely untouched (Pitfall 7 -- App Manifest callback
+  // URL is baked into the persisted GitHub App configuration).
+  // -------------------------------------------------------------------------
+  fastify.get(
+    '/settings/github',
+    { preHandler: requireLogin },
+    async (req: Req, reply: Rep) => {
+      // D-07: mint CSRF first on both paths.
+      const csrfToken = await reply.generateCsrf();
+
+      const isHtmx = req.headers['hx-request'] === 'true'
+        && req.headers['hx-history-restore-request'] !== 'true';
+
+      const connected = !!getSetting('github_app_slug');
+
+      // Build the github partial view data (same branch logic as GET /dashboard/github).
+      let githubData: Record<string, unknown>;
+
+      if (!connected) {
+        githubData = { csrfToken, connected: false, flash: '' };
+      } else {
+        const slug = getSetting('github_app_slug') ?? '';
+        const appName = getSetting('github_app_name') ?? '';
+        const htmlUrl = getSetting('github_app_html_url') ?? '';
+        const machineKey = await getMachineKey();
+
+        let installGroups: InstallGroup[] = [];
+        let flash = '';
+
+        try {
+          installGroups = await buildInstallGroups(store, machineKey);
+        } catch (err: unknown) {
+          log.error({ err: scrub(String(err)) }, 'github: failed to fetch installations from GitHub API');
+          flash = renderFlash(
+            'error',
+            'Could not reach GitHub to fetch installations. Check your credentials or try again later.',
+          );
+        }
+
+        githubData = { csrfToken, connected: true, slug, appName, htmlUrl, installGroups, flash };
+      }
+
+      // Context data for sidebar-context partial.
+      const contextData = {
+        github_app_slug: getSetting('github_app_slug'),
+        github_app_name: getSetting('github_app_name'),
+        repos: store.repos,
+      };
+
+      if (isHtmx) {
+        // Fragment path: primary section HTML + OOB sidebar-context AFTER it (htmx 2.x rule).
+        const sectionHtml = await reply.viewAsync('dashboard/partials/github', githubData) as unknown as string;
+        const ctxHtml = await reply.viewAsync('dashboard/partials/sidebar-context', contextData) as unknown as string;
+        return reply
+          .type('text/html')
+          .send(sectionHtml + '<div id="sidebar-context" hx-swap-oob="true">' + ctxHtml + '</div>');
+      }
+
+      // Full-shell path: pre-render partials then render the sidebar shell.
+      const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)(
+        'dashboard/partials/github', githubData,
+      );
+      const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)(
+        'dashboard/partials/sidebar-context', contextData,
+      );
+      return reply.viewAsync('shell', {
+        ...viewGlobals(req),
+        title: 'GitHub - Open Review',
+        activeSection: 'github',
+        sectionContent,
+        sidebarContext,
+        csrfToken,
+      }, { layout: 'layout.eta' });
     },
   );
 }
