@@ -1,4 +1,4 @@
-<section id="repos-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section id="repos-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Repositories</h2>
@@ -9,8 +9,8 @@
     <!-- Repo allowlist rows -->
     <% if (it.repos && it.repos.length > 0) { %>
       <% it.repos.forEach(function(repo) { %>
-      <div data-repo-row style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-hairline);">
-        <span class="body-md" style="color: var(--color-body);"><span style="color: var(--color-mute);">[-]</span> <%= repo %></span>
+      <div data-repo-row style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-2) 0; border-bottom: 1px solid var(--color-border);">
+        <span class="body-md" style="color: var(--color-text-muted);"><span style="color: var(--color-text-muted);">[-]</span> <%= repo %></span>
         <form
           hx-delete="/dashboard/repos/<%= encodeURIComponent(repo) %>"
           hx-target="#content"
@@ -23,7 +23,7 @@
       </div>
       <% }); %>
     <% } else { %>
-      <p class="body-md" style="color: var(--color-mute); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories configured. Add a repository below to start receiving reviews.</p>
+      <p class="body-md" style="color: var(--color-text-muted); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories configured. Add a repository below to start receiving reviews.</p>
     <% } %>
 
     <!-- Add repo row -->
@@ -31,11 +31,11 @@
       hx-post="/dashboard/repos"
       hx-target="#content"
       hx-swap="innerHTML"
-      style="margin-top: var(--spacing-md); display: flex; gap: var(--spacing-sm); align-items: flex-end;"
+      style="margin-top: var(--spacing-3); display: flex; gap: var(--spacing-2); align-items: flex-end;"
     >
       <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
       <div style="flex: 1;">
-        <label for="repo-input" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Add repository</label>
+        <label for="repo-input" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Add repository</label>
         <input
           id="repo-input"
           type="text"

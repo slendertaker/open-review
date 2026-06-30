@@ -1,8 +1,8 @@
 <nav class="nav-strip">
   <span class="body-strong">Open Review</span>
-  <a href="/activity" class="body-md" style="color: var(--color-mute);">Activity</a>
+  <a href="/activity" class="body-md" style="color: var(--color-text-muted);">Activity</a>
   <a href="/dashboard" class="body-md" style="color: var(--color-text-primary);">Settings</a>
-  <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+  <a href="/logout" class="body-md" style="color: var(--color-text-muted);">Sign out</a>
   <button
     type="button"
     aria-label="Toggle color theme"
@@ -17,12 +17,12 @@
 
 <main class="content-column">
   <div hx-get="/dashboard/github" hx-trigger="load" hx-swap="outerHTML">
-    <section id="github-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+    <section id="github-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
       <div class="section-header">
         <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'check' }) %></span>
         <h2 class="heading-md">GitHub</h2>
       </div>
-      <p class="body-md" style="color: var(--color-mute);">Loading GitHub connection status...</p>
+      <p class="body-md" style="color: var(--color-text-muted);">Loading GitHub connection status...</p>
     </section>
   </div>
   <%~ include('./partials/general', it) %>

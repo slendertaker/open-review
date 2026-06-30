@@ -2,17 +2,17 @@
      hx-get="/activity/partial"
      hx-trigger="every 5s"
      hx-swap="outerHTML">
-<section id="activity-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section id="activity-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'loader' }) %></span>
     <h2 class="heading-md">Activity</h2>
   </div>
-  <p class="caption-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">Review history</p>
+  <p class="caption-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-3);">Review history</p>
 
   <% if (!it.rows || it.rows.length === 0) { %>
-  <p class="body-md" style="color: var(--color-mute);">No reviews yet.</p>
+  <p class="body-md" style="color: var(--color-text-muted);">No reviews yet.</p>
   <% } else { %>
-  <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm); overflow: hidden;">
+  <div style="border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden;">
     <% for (const row of it.rows) { %>
     <%
       let rowIcon = 'check';
@@ -22,16 +22,16 @@
       else if (row.status === 'failed')  { rowIcon = 'x';      statusClass = 'status-failed'; }
       else if (row.status === 'rate_limited') { rowIcon = 'alert'; statusClass = 'status-warning'; }
     %>
-    <div style="display: flex; align-items: baseline; gap: var(--spacing-md); padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-hairline);">
+    <div style="display: flex; align-items: baseline; gap: var(--spacing-3); padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border);">
       <span class="bracket-prefix <%= statusClass %>" style="display:inline-flex;align-items:center;min-width:3ch;"><%~ include('./icons', { name: rowIcon }) %></span>
       <span class="body-md" style="min-width: 0; flex: 1;">
         <a href="/activity/<%= row.id %>" style="color: var(--color-text-primary); text-decoration: none;">
           <%= row.owner %>/<%= row.repo %> #<%= row.pr_number %>
         </a>
       </span>
-      <span class="caption-md" style="color: var(--color-mute);">mode: <%= row.mode %></span>
-      <span class="caption-md" style="color: var(--color-mute);">findings: <%= row.finding_count %></span>
-      <span class="caption-md" style="color: var(--color-mute);"><%= row.finished_at ? row.finished_at : row.created_at %></span>
+      <span class="caption-md" style="color: var(--color-text-muted);">mode: <%= row.mode %></span>
+      <span class="caption-md" style="color: var(--color-text-muted);">findings: <%= row.finding_count %></span>
+      <span class="caption-md" style="color: var(--color-text-muted);"><%= row.finished_at ? row.finished_at : row.created_at %></span>
       <form
         hx-post="/activity/<%= row.id %>/retrigger"
         hx-target="#activity-list"

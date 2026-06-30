@@ -1,26 +1,26 @@
 <div class="centered-card-wrapper">
   <div class="centered-card">
     <h1 class="display-xl">Set up Open Review</h1>
-    <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-sm);">Create a password to protect the dashboard.</p>
+    <p class="body-md" style="color: var(--color-text-muted); margin-top: var(--spacing-2);">Create a password to protect the dashboard.</p>
 
     <% if (it.tokenValid) { %>
-      <div style="margin-top: var(--spacing-section);">
+      <div style="margin-top: 96px;">
         <form method="POST" action="/setup">
           <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
           <input type="hidden" name="token" value="<%= it.token %>">
 
           <div>
-            <label for="password" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">New password</label>
+            <label for="password" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">New password</label>
             <input type="password" id="password" name="password" class="text-input" autocomplete="new-password" required>
-            <p class="caption-md" style="color: var(--color-mute); margin-top: var(--spacing-xs);">Minimum 12 characters.</p>
+            <p class="caption-md" style="color: var(--color-text-muted); margin-top: var(--spacing-1);">Minimum 12 characters.</p>
           </div>
 
-          <div style="margin-top: var(--spacing-md);">
-            <label for="confirm" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Confirm password</label>
+          <div style="margin-top: var(--spacing-3);">
+            <label for="confirm" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Confirm password</label>
             <input type="password" id="confirm" name="confirm" class="text-input" autocomplete="new-password" required>
           </div>
 
-          <div style="margin-top: var(--spacing-md);">
+          <div style="margin-top: var(--spacing-3);">
             <button type="submit" class="btn-primary" style="width: 100%;">Set password</button>
           </div>
 
@@ -30,7 +30,7 @@
         </form>
       </div>
     <% } else { %>
-      <div style="margin-top: var(--spacing-section);">
+      <div style="margin-top: 96px;">
         <p class="flash-error" role="alert" style="display:flex;align-items:flex-start;gap:6px;"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span>This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
       </div>
     <% } %>

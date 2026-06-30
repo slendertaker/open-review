@@ -1,12 +1,12 @@
 <nav class="nav-strip">
   <span class="body-strong">Open Review</span>
-  <a href="/activity" class="body-md" style="color: var(--color-mute);">Activity</a>
-  <a href="/dashboard" class="body-md" style="color: var(--color-mute);">Settings</a>
-  <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
+  <a href="/activity" class="body-md" style="color: var(--color-text-muted);">Activity</a>
+  <a href="/dashboard" class="body-md" style="color: var(--color-text-muted);">Settings</a>
+  <a href="/logout" class="body-md" style="color: var(--color-text-muted);">Sign out</a>
 </nav>
 
 <main class="content-column">
-  <section id="detail-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+  <section id="detail-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
     <div class="section-header">
       <%
         let runIcon = 'check';
@@ -21,44 +21,44 @@
     </div>
 
     <!-- Status and mode -->
-    <div class="field-row" style="margin-top: var(--spacing-md);">
+    <div class="field-row" style="margin-top: var(--spacing-3);">
       <p class="body-md"><strong>Status:</strong> <%= it.run.status %></p>
       <p class="body-md"><strong>Mode:</strong> <%= it.run.mode %></p>
       <p class="body-md"><strong>Provider:</strong> <%= it.run.provider %></p>
     </div>
 
     <!-- Timing -->
-    <div class="field-row" style="margin-top: var(--spacing-md);">
-      <p class="caption-md" style="color: var(--color-mute);">Created: <%= it.run.created_at %></p>
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <p class="caption-md" style="color: var(--color-text-muted);">Created: <%= it.run.created_at %></p>
       <% if (it.run.started_at) { %>
-      <p class="caption-md" style="color: var(--color-mute);">Started: <%= it.run.started_at %></p>
+      <p class="caption-md" style="color: var(--color-text-muted);">Started: <%= it.run.started_at %></p>
       <% } %>
       <% if (it.run.finished_at) { %>
-      <p class="caption-md" style="color: var(--color-mute);">Finished: <%= it.run.finished_at %></p>
+      <p class="caption-md" style="color: var(--color-text-muted);">Finished: <%= it.run.finished_at %></p>
       <% } %>
-      <p class="caption-md" style="color: var(--color-mute);">
+      <p class="caption-md" style="color: var(--color-text-muted);">
         Duration: <% if (it.run.duration_ms !== null && it.run.duration_ms !== undefined) { %><%= it.run.duration_ms %> ms<% } else { %>-- ms<% } %>
       </p>
     </div>
 
     <!-- Summary -->
     <% if (it.run.summary) { %>
-    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface-soft); border-radius: var(--rounded-sm);">
+    <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--color-surface); border-radius: var(--radius-sm);">
       <p class="body-md"><strong>Summary:</strong></p>
-      <p class="body-md" style="margin-top: var(--spacing-xs);"><%= it.run.summary %></p>
+      <p class="body-md" style="margin-top: var(--spacing-1);"><%= it.run.summary %></p>
     </div>
     <% } %>
 
     <!-- Findings -->
-    <div style="margin-top: var(--spacing-lg);">
+    <div style="margin-top: var(--spacing-4);">
       <div class="section-header">
         <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'loader' }) %></span>
         <h3 class="heading-md">Findings (<%= it.run.finding_count %>)</h3>
       </div>
       <% if (!it.findings || it.findings.length === 0) { %>
-      <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-md);">No findings.</p>
+      <p class="body-md" style="color: var(--color-text-muted); margin-top: var(--spacing-3);">No findings.</p>
       <% } else { %>
-      <div style="margin-top: var(--spacing-md); border: 1px solid var(--color-hairline); border-radius: var(--rounded-sm); overflow: hidden;">
+      <div style="margin-top: var(--spacing-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden;">
         <% for (const finding of it.findings) { %>
         <%
           let severityClass = 'status-unknown';
@@ -68,15 +68,15 @@
           else if (finding.severity === 'medium') { severityClass = 'status-warning'; sevIcon = 'loader'; }
           else if (finding.severity === 'low') { severityClass = 'status-running';  sevIcon = 'check'; }
         %>
-        <div style="padding: var(--spacing-sm) var(--spacing-md); border-bottom: 1px solid var(--color-hairline);">
-          <div style="display: flex; align-items: baseline; gap: var(--spacing-md);">
+        <div style="padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border);">
+          <div style="display: flex; align-items: baseline; gap: var(--spacing-3);">
             <span class="bracket-prefix <%= severityClass %>" style="display:inline-flex;align-items:center;min-width:3ch;"><%~ include('./partials/icons', { name: sevIcon }) %></span>
-            <span class="caption-md" style="color: var(--color-mute);"><%= finding.severity %></span>
-            <span class="body-md" style="font-family: monospace; color: var(--color-mute);">
+            <span class="caption-md" style="color: var(--color-text-muted);"><%= finding.severity %></span>
+            <span class="body-md" style="font-family: 'Geist Mono', monospace; color: var(--color-text-muted);">
               <%= finding.file %>:<%= finding.line %>
             </span>
           </div>
-          <p class="body-md" style="margin-top: var(--spacing-xs); padding-left: calc(3ch + var(--spacing-md));"><%= finding.message %></p>
+          <p class="body-md" style="margin-top: var(--spacing-1); padding-left: calc(3ch + var(--spacing-3));"><%= finding.message %></p>
         </div>
         <% } %>
       </div>
@@ -85,28 +85,28 @@
 
     <!-- Error (if any) -->
     <% if (it.run.error) { %>
-    <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface-soft); border-radius: var(--rounded-sm);">
+    <div style="margin-top: var(--spacing-3); padding: var(--spacing-3); background: var(--color-surface); border-radius: var(--radius-sm);">
       <p class="body-md" style="color: var(--color-danger);"><strong>Error:</strong></p>
-      <p class="body-md" style="margin-top: var(--spacing-xs); color: var(--color-danger);"><%= it.run.error %></p>
+      <p class="body-md" style="margin-top: var(--spacing-1); color: var(--color-danger);"><%= it.run.error %></p>
     </div>
     <% } %>
 
     <!-- Captured log -->
     <% if (it.run.log) { %>
-    <div style="margin-top: var(--spacing-lg);" x-data="{ expanded: false }">
+    <div style="margin-top: var(--spacing-4);" x-data="{ expanded: false }">
       <div class="section-header" style="cursor: pointer;" @click="expanded = !expanded">
         <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'loader' }) %></span>
         <h3 class="heading-md">Captured log</h3>
-        <span class="caption-md" style="color: var(--color-mute);" x-text="expanded ? '[ collapse ]' : '[ expand ]'"></span>
+        <span class="caption-md" style="color: var(--color-text-muted);" x-text="expanded ? '[ collapse ]' : '[ expand ]'"></span>
       </div>
-      <div x-show="expanded" style="margin-top: var(--spacing-md);">
-        <pre class="body-md" style="font-family: monospace; background: var(--color-surface-dark); color: var(--color-canvas); padding: var(--spacing-md); border-radius: var(--rounded-sm); overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"><%= it.run.log %></pre>
+      <div x-show="expanded" style="margin-top: var(--spacing-3);">
+        <pre class="body-md" style="font-family: 'Geist Mono', monospace; background: var(--color-surface-raised); color: var(--color-bg); padding: var(--spacing-3); border-radius: var(--radius-sm); overflow-x: auto; white-space: pre-wrap; max-height: 400px; overflow-y: auto;"><%= it.run.log %></pre>
       </div>
     </div>
     <% } %>
 
     <!-- Actions -->
-    <div style="margin-top: var(--spacing-lg); display: flex; align-items: center; gap: var(--spacing-md);">
+    <div style="margin-top: var(--spacing-4); display: flex; align-items: center; gap: var(--spacing-3);">
       <form
         hx-post="/activity/<%= it.run.id %>/retrigger"
         hx-target="body"
@@ -116,7 +116,7 @@
         <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
         <button type="submit" class="btn-secondary">[ re-trigger ]</button>
       </form>
-      <a href="/activity" class="body-md" style="color: var(--color-mute);">Back to Activity</a>
+      <a href="/activity" class="body-md" style="color: var(--color-text-muted);">Back to Activity</a>
     </div>
   </section>
 </main>

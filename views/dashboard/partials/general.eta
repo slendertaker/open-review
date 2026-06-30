@@ -1,4 +1,4 @@
-<section id="general-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section id="general-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">General</h2>
@@ -14,8 +14,8 @@
 
     <!-- Minimum severity -->
     <div class="field-row">
-      <label for="minSeverity" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Minimum severity</label>
-      <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">Findings below this level are not posted.</p>
+      <label for="minSeverity" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Minimum severity</label>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-1) 0;">Findings below this level are not posted.</p>
       <select id="minSeverity" name="minSeverity" class="text-input" style="width: 100%; max-width: 240px;">
         <option value="low"<% if (it.minSeverity === 'low') { %> selected<% } %>>low</option>
         <option value="medium"<% if (it.minSeverity === 'medium') { %> selected<% } %>>medium</option>
@@ -25,8 +25,8 @@
     </div>
 
     <!-- Skip draft pull requests -->
-    <div class="field-row" style="margin-top: var(--spacing-md);">
-      <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <label style="display: flex; align-items: center; gap: var(--spacing-1); cursor: pointer;">
         <input
           type="checkbox"
           name="skipDrafts"
@@ -35,12 +35,12 @@
         >
         <span class="body-md">Skip draft pull requests</span>
       </label>
-      <p class="caption-md" style="color: var(--color-mute); margin: var(--spacing-xs) 0 0 0; padding-left: 20px;">Do not review pull requests marked as draft.</p>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-1) 0 0 0; padding-left: 20px;">Do not review pull requests marked as draft.</p>
     </div>
 
     <!-- Skip forked repositories -->
-    <div class="field-row" style="margin-top: var(--spacing-md);">
-      <label style="display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;">
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <label style="display: flex; align-items: center; gap: var(--spacing-1); cursor: pointer;">
         <input
           type="checkbox"
           name="skipForks"
@@ -49,13 +49,13 @@
         >
         <span class="body-md">Skip forked repositories</span>
       </label>
-      <p class="caption-md" style="color: var(--color-mute); margin: var(--spacing-xs) 0 0 0; padding-left: 20px;">Do not review pull requests from forks.</p>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-1) 0 0 0; padding-left: 20px;">Do not review pull requests from forks.</p>
     </div>
 
     <!-- Ignore path patterns -->
-    <div class="field-row" style="margin-top: var(--spacing-md);">
-      <label for="ignoreGlobs" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Ignore path patterns</label>
-      <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">One glob per line. Matched files are excluded from review.</p>
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <label for="ignoreGlobs" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Ignore path patterns</label>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-1) 0;">One glob per line. Matched files are excluded from review.</p>
       <textarea
         id="ignoreGlobs"
         name="ignoreGlobs"
@@ -66,7 +66,7 @@
     </div>
 
     <!-- Save button + flash region -->
-    <div style="margin-top: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md);">
+    <div style="margin-top: var(--spacing-3); display: flex; align-items: center; gap: var(--spacing-3);">
       <button type="submit" class="btn-secondary">[ save ]</button>
     </div>
 

@@ -1,4 +1,4 @@
-<section id="github-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section id="github-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">GitHub</h2>
@@ -11,9 +11,9 @@
   <% if (it.manifestMode) { %>
   <!-- Connect mode: auto-submitting manifest form to github.com (top-level nav, not htmx) -->
   <div style="max-width: 560px;">
-    <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">Redirecting to GitHub to create your App...</p>
+    <p class="body-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-3);">Redirecting to GitHub to create your App...</p>
     <% if (it.isHttp) { %>
-    <p class="caption-md" style="color: var(--color-danger); margin-bottom: var(--spacing-md);">Warning: your dashboard is not serving HTTPS. GitHub requires an HTTPS redirect URL. Set a domain in the Access section before connecting.</p>
+    <p class="caption-md" style="color: var(--color-danger); margin-bottom: var(--spacing-3);">Warning: your dashboard is not serving HTTPS. GitHub requires an HTTPS redirect URL. Set a domain in the Access section before connecting.</p>
     <% } %>
     <form id="manifest-form" method="post" action="<%= it.githubCreateUrl %>">
       <input type="hidden" name="manifest" value="<%= it.manifestJson %>">
@@ -24,22 +24,22 @@
   <% } else if (it.connected) { %>
   <!-- Connected state: App identity, live install groups with per-repo toggles, and Refresh -->
   <div style="max-width: 560px;">
-    <p class="body-md" style="margin-bottom: var(--spacing-sm);">
-      <span style="color: var(--color-mute); display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
+    <p class="body-md" style="margin-bottom: var(--spacing-2);">
+      <span style="color: var(--color-text-muted); display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
       Connected as <a href="<%= it.htmlUrl %>" class="body-md" target="_blank" rel="noopener noreferrer"><%= it.appName || it.slug %></a>
     </p>
 
-    <p class="caption-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">
+    <p class="caption-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-3);">
       Newly discovered repositories default to off and must be toggled on before reviews are posted.
     </p>
 
     <!-- Refresh control: re-fetches installations and repos from the GitHub API -->
-    <p style="margin-bottom: var(--spacing-md);">
+    <p style="margin-bottom: var(--spacing-3);">
       <a
         hx-get="/dashboard/github/refresh"
         hx-target="#content"
         hx-swap="innerHTML"
-        style="cursor: pointer; color: var(--color-mute);"
+        style="cursor: pointer; color: var(--color-text-muted);"
         class="caption-md"
       >[ Refresh installations and repositories ]</a>
     </p>
@@ -48,24 +48,24 @@
     <div id="github-installs-region">
       <% if (it.installGroups && it.installGroups.length > 0) { %>
         <% it.installGroups.forEach(function(group) { %>
-        <div style="margin-bottom: var(--spacing-lg);">
+        <div style="margin-bottom: var(--spacing-4);">
           <!-- Account group header: label organization vs personal account -->
-          <p class="body-md" style="color: var(--color-body); margin-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-hairline); padding-bottom: var(--spacing-xs);">
+          <p class="body-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-2); border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-1);">
             <% if (group.accountType === 'Organization') { %>
-            <span style="color: var(--color-mute);">[org]</span> organization: <strong><%= group.accountLogin %></strong>
+            <span style="color: var(--color-text-muted);">[org]</span> organization: <strong><%= group.accountLogin %></strong>
             <% } else { %>
-            <span style="color: var(--color-mute);">[user]</span> <strong><%= group.accountLogin %></strong>
+            <span style="color: var(--color-text-muted);">[user]</span> <strong><%= group.accountLogin %></strong>
             <% } %>
           </p>
           <!-- Repository rows with per-repo toggle forms -->
           <% if (group.repos && group.repos.length > 0) { %>
             <% group.repos.forEach(function(repo) { %>
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-hairline);">
-              <span class="body-md" style="color: var(--color-body);">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-2) 0; border-bottom: 1px solid var(--color-border);">
+              <span class="body-md" style="color: var(--color-text-muted);">
                 <% if (repo.enabled) { %>
-                <span style="color: var(--color-mute);">[on]</span>
+                <span style="color: var(--color-text-muted);">[on]</span>
                 <% } else { %>
-                <span style="color: var(--color-mute);">[off]</span>
+                <span style="color: var(--color-text-muted);">[off]</span>
                 <% } %>
                 <%= repo.fullName %>
               </span>
@@ -78,20 +78,20 @@
               >
                 <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
                 <input type="hidden" name="enabled" value="<%= repo.enabled ? '0' : '1' %>">
-                <button type="submit" class="caption-md" style="background: none; border: none; cursor: pointer; padding: 0; color: var(--color-mute);">
+                <button type="submit" class="caption-md" style="background: none; border: none; cursor: pointer; padding: 0; color: var(--color-text-muted);">
                   <% if (repo.enabled) { %>[ disable ]<% } else { %>[ enable ]<% } %>
                 </button>
               </form>
             </div>
             <% }); %>
           <% } else { %>
-          <p class="caption-md" style="color: var(--color-mute); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories accessible for this installation.</p>
+          <p class="caption-md" style="color: var(--color-text-muted); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories accessible for this installation.</p>
           <% } %>
         </div>
         <% }); %>
       <% } else { %>
       <!-- Zero-installation state: prompt the operator to install the App -->
-      <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-sm); display:inline-flex;align-items:center;gap:4px;">
+      <p class="body-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-2); display:inline-flex;align-items:center;gap:4px;">
         <%~ include('./icons', { name: 'x' }) %> No installations found. Install the App on your personal account or organization to start selecting repositories.
       </p>
       <p>
@@ -104,7 +104,7 @@
   <% } else { %>
   <!-- Not-connected state: Connect GitHub button and optional org input -->
   <div style="max-width: 560px;">
-    <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">
+    <p class="body-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-3);">
       Connect a GitHub App to enable automatic PR reviews. The dashboard creates the App for you -- no manual credential setup required.
     </p>
 
@@ -114,11 +114,11 @@
       id="connect-github-form"
       action="/dashboard/github/connect"
       method="get"
-      style="margin-bottom: var(--spacing-md);"
+      style="margin-bottom: var(--spacing-3);"
     >
-      <div style="margin-bottom: var(--spacing-sm);">
-        <label for="github-org-input" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Organization (optional)</label>
-        <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">
+      <div style="margin-bottom: var(--spacing-2);">
+        <label for="github-org-input" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Organization (optional)</label>
+        <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-1) 0;">
           Leave blank to create the App under your personal account.
           You must be an admin of the organization to create an App under it.
         </p>

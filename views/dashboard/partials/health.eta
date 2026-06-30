@@ -1,10 +1,10 @@
-<section style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Service health</h2>
   </div>
 
-  <div class="field-row" style="margin-top: var(--spacing-md);">
+  <div class="field-row" style="margin-top: var(--spacing-3);">
 
     <!-- Queue depth -->
     <p class="body-md">
@@ -27,12 +27,12 @@
         <a href="/activity/<%= lr.id %>" style="color: var(--color-text-primary); text-decoration: none;">
           <%= lr.owner %>/<%= lr.repo %> #<%= lr.pr_number %>
         </a>
-        <span class="caption-md" style="color: var(--color-mute);">(<%= lr.status %>)</span>
+        <span class="caption-md" style="color: var(--color-text-muted);">(<%= lr.status %>)</span>
         <% if (lr.finished_at) { %>
-        <span class="caption-md" style="color: var(--color-mute);"><%= lr.finished_at %></span>
+        <span class="caption-md" style="color: var(--color-text-muted);"><%= lr.finished_at %></span>
         <% } %>
       <% } else { %>
-        <span style="color: var(--color-mute);">No reviews yet.</span>
+        <span style="color: var(--color-text-muted);">No reviews yet.</span>
       <% } %>
     </p>
 
@@ -41,7 +41,7 @@
       <strong>Provider:</strong>
       <span><%= it.health.provider %></span>
       <% if (it.health.hasOauthToken || it.health.hasApiKey) { %>
-        <span class="caption-md" style="color: var(--color-mute);">[credential present]</span>
+        <span class="caption-md" style="color: var(--color-text-muted);">[credential present]</span>
       <% } else { %>
         <span class="caption-md" style="color: var(--color-danger);">[no credential]</span>
       <% } %>
@@ -51,9 +51,9 @@
     <p class="body-md">
       <strong>CLI:</strong>
       <% if (it.health.cliVersion === 'ok') { %>
-        <span class="caption-md" style="color: var(--color-mute);">[ reachable ]</span>
+        <span class="caption-md" style="color: var(--color-text-muted);">[ reachable ]</span>
       <% } else if (it.health.cliVersion) { %>
-        <span class="caption-md" style="color: var(--color-mute);">v<%= it.health.cliVersion %></span>
+        <span class="caption-md" style="color: var(--color-text-muted);">v<%= it.health.cliVersion %></span>
       <% } else { %>
         <span class="caption-md" style="color: var(--color-danger);">
           unreachable<% if (it.health.cliError) { %>: <%= it.health.cliError %><% } %>

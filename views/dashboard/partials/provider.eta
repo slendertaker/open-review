@@ -1,4 +1,4 @@
-<section id="provider-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+<section id="provider-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Provider</h2>
@@ -13,30 +13,30 @@
     <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
 
     <!-- Claude Code (active) -->
-    <div class="field-row" style="margin-bottom: var(--spacing-md);">
-      <label style="display: flex; align-items: flex-start; gap: var(--spacing-xs); cursor: pointer;">
+    <div class="field-row" style="margin-bottom: var(--spacing-3);">
+      <label style="display: flex; align-items: flex-start; gap: var(--spacing-1); cursor: pointer;">
         <input type="radio" name="provider" value="claude" checked style="margin-top: 4px;">
         <span>
           <span class="body-strong" style="display: block;">Claude Code</span>
-          <span class="caption-md" style="color: var(--color-mute);">Active provider.</span>
+          <span class="caption-md" style="color: var(--color-text-muted);">Active provider.</span>
         </span>
       </label>
     </div>
 
     <!-- OpenAI Codex (disabled) -->
-    <div class="field-row" style="margin-bottom: var(--spacing-md);">
-      <label style="display: flex; align-items: flex-start; gap: var(--spacing-xs); cursor: default;">
+    <div class="field-row" style="margin-bottom: var(--spacing-3);">
+      <label style="display: flex; align-items: flex-start; gap: var(--spacing-1); cursor: default;">
         <input type="radio" name="provider" value="codex" disabled style="margin-top: 4px; cursor: default;">
         <span>
-          <span class="body-md" style="color: var(--color-ash); display: inline;">OpenAI Codex</span>
-          <span style="background: var(--color-surface-card); color: var(--color-mute); font-size: 14px; padding: 2px 8px; border-radius: 4px; margin-left: var(--spacing-xs);">[not available yet]</span>
-          <span class="caption-md" style="color: var(--color-ash); display: block; margin-top: var(--spacing-xs);">Coming in a future release.</span>
+          <span class="body-md" style="color: var(--color-text-disabled); display: inline;">OpenAI Codex</span>
+          <span style="background: var(--color-surface-raised); color: var(--color-text-muted); font-size: 14px; padding: 2px 8px; border-radius: 4px; margin-left: var(--spacing-1);">[not available yet]</span>
+          <span class="caption-md" style="color: var(--color-text-disabled); display: block; margin-top: var(--spacing-1);">Coming in a future release.</span>
         </span>
       </label>
     </div>
 
     <!-- Save button + flash region -->
-    <div style="margin-top: var(--spacing-md); display: flex; align-items: center; gap: var(--spacing-md);">
+    <div style="margin-top: var(--spacing-3); display: flex; align-items: center; gap: var(--spacing-3);">
       <button type="submit" class="btn-secondary">[ save ]</button>
     </div>
 
@@ -46,31 +46,31 @@
   </form>
 
   <!-- Claude provider secret fields (write-only, D2-06) -->
-  <div style="margin-top: var(--spacing-xl); max-width: 560px;">
-    <p class="body-md" style="font-weight: 700; margin-bottom: var(--spacing-md);">Claude credentials</p>
-    <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-md) 0;">Manage Claude credentials in the Secrets section below.</p>
+  <div style="margin-top: var(--spacing-6); max-width: 560px;">
+    <p class="body-md" style="font-weight: 700; margin-bottom: var(--spacing-3);">Claude credentials</p>
+    <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-3) 0;">Manage Claude credentials in the Secrets section below.</p>
 
     <!-- Claude OAuth token presence indicator -->
-    <div class="field-row" style="margin-bottom: var(--spacing-sm);">
-      <span class="body-md" style="color: var(--color-ink);">Claude OAuth token:</span>
+    <div class="field-row" style="margin-bottom: var(--spacing-2);">
+      <span class="body-md" style="color: var(--color-text-primary);">Claude OAuth token:</span>
       <% if (it.claudeOauthTokenPreview) { %>
-      <span class="caption-md secret-preview" style="margin-left: var(--spacing-xs);" aria-label="Masked preview"><%= it.claudeOauthTokenPreview %></span>
+      <span class="caption-md secret-preview" style="margin-left: var(--spacing-1);" aria-label="Masked preview"><%= it.claudeOauthTokenPreview %></span>
       <% } else if (it.hasClaudeOauthToken) { %>
-      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(set)</span>
+      <span class="caption-md" style="color: var(--color-text-disabled); margin-left: var(--spacing-1);">(set)</span>
       <% } else { %>
-      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(not set)</span>
+      <span class="caption-md" style="color: var(--color-text-disabled); margin-left: var(--spacing-1);">(not set)</span>
       <% } %>
     </div>
 
     <!-- Anthropic API key presence indicator -->
-    <div class="field-row" style="margin-bottom: var(--spacing-sm);">
-      <span class="body-md" style="color: var(--color-ink);">Anthropic API key:</span>
+    <div class="field-row" style="margin-bottom: var(--spacing-2);">
+      <span class="body-md" style="color: var(--color-text-primary);">Anthropic API key:</span>
       <% if (it.anthropicApiKeyPreview) { %>
-      <span class="caption-md secret-preview" style="margin-left: var(--spacing-xs);" aria-label="Masked preview"><%= it.anthropicApiKeyPreview %></span>
+      <span class="caption-md secret-preview" style="margin-left: var(--spacing-1);" aria-label="Masked preview"><%= it.anthropicApiKeyPreview %></span>
       <% } else if (it.hasAnthropicApiKey) { %>
-      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(set)</span>
+      <span class="caption-md" style="color: var(--color-text-disabled); margin-left: var(--spacing-1);">(set)</span>
       <% } else { %>
-      <span class="caption-md" style="color: var(--color-ash); margin-left: var(--spacing-xs);">(not set)</span>
+      <span class="caption-md" style="color: var(--color-text-disabled); margin-left: var(--spacing-1);">(not set)</span>
       <% } %>
     </div>
   </div>
