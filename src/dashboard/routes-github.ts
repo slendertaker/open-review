@@ -246,6 +246,7 @@ export async function registerGithubRoutes(
         return reply.code(200).viewAsync('dashboard/partials/github', {
           csrfToken,
           connected: false,
+          onboardingStep: 1,
           flash: '',
         });
       }
@@ -268,9 +269,12 @@ export async function registerGithubRoutes(
         );
       }
 
+      const onboardingStep = store.repos.length > 0 ? 3 : 2;
+
       return reply.code(200).viewAsync('dashboard/partials/github', {
         csrfToken,
         connected: true,
+        onboardingStep,
         slug,
         appName,
         htmlUrl,
@@ -582,7 +586,8 @@ export async function registerGithubRoutes(
       let githubData: Record<string, unknown>;
 
       if (!connected) {
-        githubData = { csrfToken, connected: false, flash: '' };
+        const onboardingStep = 1;
+        githubData = { csrfToken, connected: false, onboardingStep, flash: '' };
       } else {
         const slug = getSetting('github_app_slug') ?? '';
         const appName = getSetting('github_app_name') ?? '';
@@ -602,7 +607,8 @@ export async function registerGithubRoutes(
           );
         }
 
-        githubData = { csrfToken, connected: true, slug, appName, htmlUrl, installGroups, flash };
+        const onboardingStep = store.repos.length > 0 ? 3 : 2;
+        githubData = { csrfToken, connected: true, onboardingStep, slug, appName, htmlUrl, installGroups, flash };
       }
 
       // Context data for sidebar-context partial.

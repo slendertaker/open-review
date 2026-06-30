@@ -1,0 +1,11 @@
+<% if (it.onboardingStep < 3) { %>
+<div class="onboarding-steps">
+  <% const steps = ['Connect GitHub', 'Add repositories', 'Ready']; %>
+  <% steps.forEach(function(label, i) { %>
+  <div class="onboarding-step <%= it.onboardingStep === i+1 ? 'onboarding-step--active' : (it.onboardingStep > i+1 ? 'onboarding-step--done' : 'onboarding-step--future') %>">
+    <span class="onboarding-step-circle"><%= i+1 %></span>
+    <span class="caption-md"><%= label %></span>
+  </div>
+  <% }); %>
+</div>
+<% } %>
