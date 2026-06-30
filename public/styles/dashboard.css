@@ -195,65 +195,41 @@ a:hover {
  * Button components
  * ------------------------------------------------------------------------- */
 
-.btn-primary {
-  display: inline-block;
-  background: var(--color-text-primary);
-  color: var(--color-bg);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 2.0;
-  padding: 8px 20px;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: 6px 14px;
   border-radius: var(--radius-sm);
-  border: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
   cursor: pointer;
-  min-height: 36px;
   text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 100ms ease, color 100ms ease;
 }
 
-.btn-primary:hover {
-  background: var(--color-text-primary);
-  color: var(--color-bg);
+.btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
-.btn-primary:active {
-  background: var(--color-text-primary);
-}
+.btn-primary { background: var(--color-accent); color: #ffffff; border-color: var(--color-accent); }
+.btn-primary:hover { background: #005fcc; }
 
-.btn-secondary {
-  display: inline-block;
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 2.0;
-  padding: 8px 20px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border-strong);
-  cursor: pointer;
-  min-height: 36px;
-  text-decoration: none;
-}
+.btn-secondary { background: transparent; color: var(--color-text-primary); border-color: var(--color-border-strong); }
+.btn-secondary:hover { background: var(--color-surface-raised); }
 
-.btn-secondary:hover {
-  background: var(--color-surface);
-}
+.btn-ghost { background: transparent; color: var(--color-text-muted); border-color: transparent; }
+.btn-ghost:hover { background: var(--color-surface-raised); color: var(--color-text-primary); }
 
-.btn-disabled {
-  display: inline-block;
-  background: var(--color-surface-raised);
-  color: var(--color-text-disabled);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 2.0;
-  padding: 8px 20px;
-  border-radius: var(--radius-sm);
-  border: none;
-  cursor: default;
-  min-height: 36px;
-}
+.btn-danger { background: var(--color-danger); color: #ffffff; border-color: var(--color-danger); }
+.btn-danger:hover { background: #dc2626; }
+
+.btn[disabled],
+.btn-disabled { opacity: 0.5; cursor: default; }
 
 /* -------------------------------------------------------------------------
  * Form components
@@ -281,7 +257,9 @@ a:hover {
 
 .text-input:focus {
   background: var(--color-bg);
-  border-color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 textarea.text-input {
@@ -438,11 +416,10 @@ select.text-input {
     padding: var(--spacing-4) var(--spacing-3);
   }
 
-  .btn-primary,
-  .btn-secondary {
+  .btn {
     width: 100%;
-    display: block;
-    text-align: center;
+    display: flex;
+    justify-content: center;
     min-height: 44px;
   }
 
