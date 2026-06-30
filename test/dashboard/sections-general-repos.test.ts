@@ -222,6 +222,36 @@ describe('General section (DCFG-01, DCFG-05) -- Plan 03', () => {
     // Unauthenticated -> redirect to /login (302) or CSRF failure (403).
     expect([302, 403]).toContain(res.statusCode);
   });
+
+  // D-07: a CSRF token minted by the htmx fragment path is accepted by the POST handler
+  it('CSRF minted from GET /settings/general htmx fragment is accepted by POST /dashboard/settings/general (D-07)', async () => {
+    const cookie = await login();
+
+    // Fetch the fragment -- the new /settings/general route mints a session-valid CSRF
+    const fragRes = await server.inject({
+      method: 'GET',
+      url: '/settings/general',
+      headers: { cookie, 'hx-request': 'true' },
+    });
+
+    // This is RED until Wave 1 lands the /settings/general route. Once it does:
+    // the fragment must contain a non-undefined _csrf input.
+    const csrf = extractCsrf(fragRes.body as string);
+
+    const res = await server.inject({
+      method: 'POST',
+      url: '/dashboard/settings/general',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: [
+        `_csrf=${encodeURIComponent(csrf)}`,
+        'minSeverity=high',
+        'ignoreGlobs=dist/**',
+      ].join('&'),
+    });
+
+    // Proves the fragment-minted token is session-valid (not a 403 CSRF rejection).
+    expect(res.statusCode).toBe(200);
+  });
 });
 
 // =============================================================================

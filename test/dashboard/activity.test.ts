@@ -178,10 +178,11 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
   });
 
   // WR-02 / WR-03: the full feed page must contain exactly one #activity-list
-  // and one #health-panel. Previously activity.eta wrapped the partial in its
-  // own polling container AND the partial re-emitted both ids, producing
-  // duplicate ids and two parallel 5s pollers.
-  it('GET /activity renders exactly one #activity-list and one #health-panel', async () => {
+  // and one 5s poller. After D-06, #health-panel is decoupled from /activity
+  // and lives only on /settings/health. Previously activity.eta wrapped the
+  // partial in its own polling container AND the partial re-emitted both ids,
+  // producing duplicate ids and two parallel 5s pollers.
+  it('GET /activity renders one #activity-list, one 5s poller, and no health-panel after D-06', async () => {
     const cookie = await login();
 
     insertReviewRun({ repo: 'testrepo', prNumber: 42 });
@@ -198,8 +199,23 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     const healthPanelIds = body.match(/id="health-panel"/g) ?? [];
     const pollers = body.match(/hx-trigger="every 5s"/g) ?? [];
     expect(activityListIds).toHaveLength(1);
-    expect(healthPanelIds).toHaveLength(1);
+    expect(healthPanelIds).toHaveLength(0);
     expect(pollers).toHaveLength(1);
+  });
+
+  // D-06: /activity/partial must not emit a health-panel OOB after the decouple
+  it('GET /activity/partial does NOT contain health-panel OOB after D-06', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/activity/partial',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body as string).not.toContain('id="health-panel"');
+    expect(res.body as string).not.toContain('hx-swap-oob');
   });
 
   // T-03-04: feed login gate
