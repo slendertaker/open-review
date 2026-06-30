@@ -90,6 +90,27 @@ export async function registerDashboardRoutes(
   fastify.get('/logout', logoutHandler);
 
   // -------------------------------------------------------------------------
+  // POST /theme -- persist theme preference in cookie (no auth required; stores no secrets)
+  // Fastify body schema enum validation rejects any value other than dark|light (T-06-04).
+  // Cookie is readable by JS (no http-only flag): the inline FOUC guard reads it via document.cookie.
+  // -------------------------------------------------------------------------
+  fastify.post('/theme', {
+    schema: {
+      body: {
+        type: 'object',
+        properties: { theme: { type: 'string', enum: ['dark', 'light'] } },
+        required: ['theme'],
+      },
+    },
+  }, async (req: Req, reply: Rep) => {
+    const { theme } = req.body as { theme: 'dark' | 'light' };
+    reply
+      .header('Set-Cookie', `or_theme=${theme}; Path=/; SameSite=Lax; Max-Age=31536000`)
+      .code(204)
+      .send();
+  });
+
+  // -------------------------------------------------------------------------
   // GET /dashboard -- main settings page (requires authentication)
   // -------------------------------------------------------------------------
   fastify.get('/dashboard', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
