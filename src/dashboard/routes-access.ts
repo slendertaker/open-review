@@ -25,6 +25,7 @@ import { deleteAllSessionsExcept } from '../state/sessions.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
 import { applyDomain } from './caddy.js';
+import { viewGlobals } from './routes.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -38,6 +39,36 @@ export async function registerAccessRoutes(
   store: ConfigStore,
   db: Database.Database,
 ): Promise<void> {
+  // -------------------------------------------------------------------------
+  // GET /settings/access -- hybrid: fragment (HX-Request) or full shell (NAV-03, NAV-04, D-07)
+  // -------------------------------------------------------------------------
+  fastify.get('/settings/access', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
+    const csrfToken = await reply.generateCsrf();
+    const sectionData = { csrfToken, domain: store.domain ?? '', flash: '', domainFlash: '' };
+
+    const isHtmx = req.headers['hx-request'] === 'true'
+      && req.headers['hx-history-restore-request'] !== 'true';
+
+    if (isHtmx) {
+      return reply.code(200).viewAsync('dashboard/partials/access', sectionData);
+    }
+
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/access', sectionData);
+    const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/sidebar-context', {
+      github_app_slug: getSetting('github_app_slug'),
+      github_app_name: getSetting('github_app_name'),
+      repos: store.repos,
+    });
+    return reply.viewAsync('shell', {
+      ...viewGlobals(req),
+      title: 'Access - Open Review',
+      activeSection: 'access',
+      sectionContent,
+      sidebarContext,
+      csrfToken,
+    }, { layout: 'layout.eta' });
+  });
+
   // -------------------------------------------------------------------------
   // POST /dashboard/settings/password -- change dashboard password (DSEC-01)
   // T-02-21: CSRF via preHandler; T-02-20: requires correct current password
