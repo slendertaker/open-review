@@ -40,6 +40,7 @@ import { getSetting, setSetting } from './state/config-state.js';
 import { registerSetupRoutes } from './dashboard/setup.js';
 import { registerDashboardRoutes } from './dashboard/routes.js';
 import { setSecretsMachineKey } from './dashboard/routes-secrets.js';
+import { setGithubRoutesMachineKey } from './dashboard/routes-github.js';
 import { log } from './logger.js';
 import type { ConfigStore } from './config/store.js';
 import type Database from 'better-sqlite3';
@@ -66,6 +67,7 @@ export async function buildServer(
   // to loadMachineKey() which reads data/secret.key or OPEN_REVIEW_SECRET_KEY env.
   if (machineKey) {
     setSecretsMachineKey(machineKey);
+    setGithubRoutesMachineKey(machineKey);
   }
   // trustProxy scoped to loopback only -- required for secure:'auto' cookie behavior
   // behind a same-host Caddy (D2-11, Pitfall 2) WITHOUT trusting an arbitrary
