@@ -36,7 +36,7 @@ import { verifySignature } from './webhook/verify.js';
 import { shouldProcess } from './webhook/filter.js';
 import { recordDelivery } from './state/deliveries.js';
 import { SqliteSessionStore } from './state/sessions.js';
-import { setSetting } from './state/config-state.js';
+import { getSetting, setSetting } from './state/config-state.js';
 import { registerSetupRoutes } from './dashboard/setup.js';
 import { registerDashboardRoutes } from './dashboard/routes.js';
 import { setSecretsMachineKey } from './dashboard/routes-secrets.js';
@@ -199,6 +199,7 @@ export async function buildServer(
       repos: store.repos,
       skipDrafts: store.skipDrafts,
       skipForks: store.skipForks,
+      appConnected: !!getSetting('github_app_slug'), // live read per webhook (D5-07)
     });
 
     if (!filterResult.process) {

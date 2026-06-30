@@ -13,6 +13,7 @@ export interface FilterConfig {
   repos: string[];
   skipDrafts: boolean;
   skipForks: boolean;
+  appConnected: boolean; // true when github_app_slug setting is present (D5-07)
 }
 
 export interface FilterResult {
@@ -67,11 +68,20 @@ export function shouldProcess(
     return { process: false, reason: `action '${p.action}' is not actionable` };
   }
 
-  // Step 3: Repo allowlist (INTK-03).
-  // An empty allowlist means "allow any repo" -- the App installation is the boundary.
+  // Step 3: Repo allowlist (INTK-03, D5-07).
+  // When appConnected=true (App mode): repos list is authoritative; empty = review nothing (strict opt-in).
+  // When appConnected=false (manual/env mode): empty = allow all (legacy, must never regress).
   const repoFullName = p.repository?.full_name;
-  if (config.repos.length > 0 && (!repoFullName || !config.repos.includes(repoFullName))) {
-    return { process: false, reason: `repo '${repoFullName ?? ''}' is not in the allowlist` };
+  if (config.appConnected) {
+    // App mode: strict opt-in -- repos list is authoritative; empty = review nothing
+    if (!repoFullName || !config.repos.includes(repoFullName)) {
+      return { process: false, reason: `repo '${repoFullName ?? ''}' is not in the App allowlist (opt-in required)` };
+    }
+  } else {
+    // Manual/env mode: current behavior -- empty = allow all (never regress this)
+    if (config.repos.length > 0 && (!repoFullName || !config.repos.includes(repoFullName))) {
+      return { process: false, reason: `repo '${repoFullName ?? ''}' is not in the allowlist` };
+    }
   }
 
   // Step 4: Draft skip (INTK-03, togglable).
