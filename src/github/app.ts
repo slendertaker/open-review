@@ -47,6 +47,21 @@ export async function installationToken(
 }
 
 /**
+ * Build an Octokit client authenticated as the App (no installationId).
+ * Used for App-level routes such as listing all installations.
+ * @octokit/auth-app auto-selects App JWT for routes under /app/*.
+ */
+export function appLevelOctokit(creds: AppCredentials): Octokit {
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth: {
+      appId: creds.appId,
+      privateKey: creds.privateKey,
+    },
+  });
+}
+
+/**
  * Build a PAT-authenticated Octokit client (single-repo fallback).
  */
 export function patOctokit(token: string): Octokit {

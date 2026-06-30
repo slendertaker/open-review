@@ -12,11 +12,12 @@ import pino from 'pino';
 
 /**
  * Regex patterns for secret token prefixes to scrub from free-form strings.
- * Covers Claude/Anthropic API keys, AWS keys, GitHub tokens, and Phase 2
- * OAuth token query-string shapes (D2-06, T-02-04).
+ * Covers Claude/Anthropic API keys, AWS keys, GitHub tokens, Phase 2
+ * OAuth token query-string shapes (D2-06, T-02-04), and Phase 5 PEM private-key
+ * blocks matched by a BEGIN/END PRIVATE KEY header/footer pair (D5-08).
  */
 const SCRUB_RE =
-  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+|oauth_token=[^\s&]+|token=[0-9a-fA-F]{32,})/gi;
+  /(sk-ant-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16}|gh[ps]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+|x-access-token:[^\s@]+|Bearer [A-Za-z0-9._\-]+|oauth_token=[^\s&]+|client_secret=[0-9a-fA-F]{32,}|token=[0-9a-fA-F]{32,}|-----BEGIN[A-Z ]+PRIVATE KEY-----[\s\S]+?-----END[A-Z ]+PRIVATE KEY-----)/gi;
 
 /**
  * Scrub secret token values from a free-form string.
@@ -45,6 +46,12 @@ export function buildLogger(level: string = 'info'): pino.Logger {
         'body.password',
         'body.newPassword',
         'body.currentPassword',
+        // Phase 5 additions: App credentials and manifest callback tokens (D5-08)
+        'body.pem',
+        'body.webhook_secret',
+        'body.client_secret',
+        'req.query.code',
+        'req.query.state',
       ],
       censor: '[REDACTED]',
     },
