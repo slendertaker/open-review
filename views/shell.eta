@@ -1,0 +1,138 @@
+<%#
+  shell.eta - Persistent sidebar shell
+  Rendered inside layout.eta via { layout: 'layout.eta' } on every full-page load.
+  The sidebar is a SIBLING of #content -- never nested inside it.
+  htmx swaps target #content (innerHTML); the sidebar is never re-rendered on nav.
+%>
+<div class="app-shell">
+  <aside
+    class="sidebar"
+    id="sidebar"
+    x-data="{
+      activePath: window.location.pathname
+    }"
+    @htmx:pushed-into-history.window="activePath = window.location.pathname"
+    @htmx:after-settle.window="activePath = window.location.pathname"
+    @popstate.window="activePath = window.location.pathname"
+  >
+    <div class="sidebar-brand">
+      <span class="body-strong">Open Review</span>
+    </div>
+
+    <%# D-05: pre-rendered context block on full-shell load; OOB target for live updates %>
+    <div id="sidebar-context">
+      <%~ it.sidebarContext %>
+    </div>
+
+    <nav id="sidebar-nav">
+      <%# Activity group %>
+      <div class="sidebar-group">
+        <a
+          href="/activity"
+          hx-get="/activity"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'activity' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/activity' }"
+        >Activity</a>
+      </div>
+
+      <%# Settings group - explicit links so label capitalization is unambiguous.
+          The GitHub label MUST render as "GitHub" (capital H), not "Github".
+          Labels: General, Provider, Secrets, GitHub, Repos, Access, Health. %>
+      <div class="sidebar-group">
+        <span class="sidebar-group-label caption-md">Settings</span>
+        <a
+          href="/settings/general"
+          hx-get="/settings/general"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'general' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/general' }"
+        >General</a>
+        <a
+          href="/settings/provider"
+          hx-get="/settings/provider"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'provider' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/provider' }"
+        >Provider</a>
+        <a
+          href="/settings/secrets"
+          hx-get="/settings/secrets"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'secrets' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/secrets' }"
+        >Secrets</a>
+        <a
+          href="/settings/github"
+          hx-get="/settings/github"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'github' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/github' }"
+        >GitHub</a>
+        <a
+          href="/settings/repos"
+          hx-get="/settings/repos"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'repos' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/repos' }"
+        >Repos</a>
+        <a
+          href="/settings/access"
+          hx-get="/settings/access"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'access' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/access' }"
+        >Access</a>
+        <a
+          href="/settings/health"
+          hx-get="/settings/health"
+          hx-target="#content"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="nav-item<%= it.activeSection === 'health' ? ' nav-item--active' : '' %>"
+          :class="{ 'nav-item--active': activePath === '/settings/health' }"
+        >Health</a>
+      </div>
+    </nav>
+
+    <footer class="sidebar-footer">
+      <a href="/logout" class="body-md nav-item">Sign out</a>
+      <button
+        type="button"
+        aria-label="Toggle color theme"
+        class="theme-toggle"
+        @click="
+          const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          document.cookie = 'or_theme=' + next + '; Path=/; SameSite=Lax; Max-Age=31536000';
+        "
+      ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+    </footer>
+  </aside>
+
+  <main id="content" class="content-panel">
+    <%~ it.sectionContent %>
+  </main>
+</div>
+
+<%# Pitfall 1 mitigation: prevent history cache-miss from injecting bare fragment into body.
+    Set after htmx loads (deferred scripts), so listen for htmx:ready. %>
+<script>
+document.addEventListener('htmx:ready', function() {
+  htmx.config.historyRestoreAsHxRequest = false;
+});
+</script>
