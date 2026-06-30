@@ -22,7 +22,7 @@
   </div>
 
   <% } else if (it.connected) { %>
-  <!-- Connected state: App identity + install groups placeholder (Plan 04 fills live listing) -->
+  <!-- Connected state: App identity, live install groups with per-repo toggles, and Refresh -->
   <div style="max-width: 560px;">
     <p class="body-md" style="margin-bottom: var(--spacing-sm);">
       <span style="color: var(--color-mute);">[+]</span>
@@ -33,22 +33,55 @@
       Newly discovered repositories default to off and must be toggled on before reviews are posted.
     </p>
 
-    <!-- Installations/repo groups -- populated by Plan 04 -->
+    <!-- Refresh control: re-fetches installations and repos from the GitHub API -->
+    <p style="margin-bottom: var(--spacing-md);">
+      <a
+        hx-get="/dashboard/github/refresh"
+        hx-target="#github-section"
+        hx-swap="outerHTML"
+        style="cursor: pointer; color: var(--color-mute);"
+        class="caption-md"
+      >[ Refresh installations and repositories ]</a>
+    </p>
+
+    <!-- Installations/repo groups (D5-05, SC-3) -->
     <div id="github-installs-region">
       <% if (it.installGroups && it.installGroups.length > 0) { %>
         <% it.installGroups.forEach(function(group) { %>
-        <div style="margin-bottom: var(--spacing-md);">
-          <p class="body-md" style="color: var(--color-body); margin-bottom: var(--spacing-sm);">
+        <div style="margin-bottom: var(--spacing-lg);">
+          <!-- Account group header: label organization vs personal account -->
+          <p class="body-md" style="color: var(--color-body); margin-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-hairline); padding-bottom: var(--spacing-xs);">
             <% if (group.accountType === 'Organization') { %>
-            <span style="color: var(--color-mute);">[org]</span> organization: <%= group.accountLogin %>
+            <span style="color: var(--color-mute);">[org]</span> organization: <strong><%= group.accountLogin %></strong>
             <% } else { %>
-            <span style="color: var(--color-mute);">[user]</span> <%= group.accountLogin %>
+            <span style="color: var(--color-mute);">[user]</span> <strong><%= group.accountLogin %></strong>
             <% } %>
           </p>
+          <!-- Repository rows with per-repo toggle forms -->
           <% if (group.repos && group.repos.length > 0) { %>
             <% group.repos.forEach(function(repo) { %>
             <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-hairline);">
-              <span class="body-md" style="color: var(--color-body);"><%= repo.fullName %></span>
+              <span class="body-md" style="color: var(--color-body);">
+                <% if (repo.enabled) { %>
+                <span style="color: var(--color-mute);">[on]</span>
+                <% } else { %>
+                <span style="color: var(--color-mute);">[off]</span>
+                <% } %>
+                <%= repo.fullName %>
+              </span>
+              <!-- Toggle form: flips enabled state. enabled value is the OPPOSITE of current. -->
+              <form
+                hx-post="/dashboard/github/repos/<%= encodeURIComponent(repo.fullName) %>/toggle"
+                hx-target="#github-section"
+                hx-swap="outerHTML"
+                style="display: inline;"
+              >
+                <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+                <input type="hidden" name="enabled" value="<%= repo.enabled ? '0' : '1' %>">
+                <button type="submit" class="caption-md" style="background: none; border: none; cursor: pointer; padding: 0; color: var(--color-mute);">
+                  <% if (repo.enabled) { %>[ disable ]<% } else { %>[ enable ]<% } %>
+                </button>
+              </form>
             </div>
             <% }); %>
           <% } else { %>
@@ -56,6 +89,14 @@
           <% } %>
         </div>
         <% }); %>
+      <% } else { %>
+      <!-- Zero-installation state: prompt the operator to install the App -->
+      <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-sm);">
+        [x] No installations found. Install the App on your personal account or organization to start selecting repositories.
+      </p>
+      <p>
+        <a href="/dashboard/github/install" class="btn-secondary">[ Install GitHub App ]</a>
+      </p>
       <% } %>
     </div>
   </div>
