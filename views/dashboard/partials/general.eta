@@ -1,4 +1,4 @@
-<section id="general-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="general-section" class="section-card">
   <div class="section-header">
     <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">General</h2>
@@ -26,13 +26,9 @@
 
     <!-- Skip draft pull requests -->
     <div class="field-row" style="margin-top: var(--spacing-3);">
-      <label style="display: flex; align-items: center; gap: var(--spacing-1); cursor: pointer;">
-        <input
-          type="checkbox"
-          name="skipDrafts"
-          value="on"
-          <% if (it.skipDrafts) { %>checked<% } %>
-        >
+      <label class="field-toggle-label">
+        <input type="checkbox" class="field-toggle" name="skipDrafts" value="on" <% if (it.skipDrafts) { %>checked<% } %>>
+        <span class="field-toggle-track"></span>
         <span class="body-md">Skip draft pull requests</span>
       </label>
       <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-1) 0 0 0; padding-left: 20px;">Do not review pull requests marked as draft.</p>
@@ -40,13 +36,9 @@
 
     <!-- Skip forked repositories -->
     <div class="field-row" style="margin-top: var(--spacing-3);">
-      <label style="display: flex; align-items: center; gap: var(--spacing-1); cursor: pointer;">
-        <input
-          type="checkbox"
-          name="skipForks"
-          value="on"
-          <% if (it.skipForks) { %>checked<% } %>
-        >
+      <label class="field-toggle-label">
+        <input type="checkbox" class="field-toggle" name="skipForks" value="on" <% if (it.skipForks) { %>checked<% } %>>
+        <span class="field-toggle-track"></span>
         <span class="body-md">Skip forked repositories</span>
       </label>
       <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-1) 0 0 0; padding-left: 20px;">Do not review pull requests from forks.</p>
@@ -67,7 +59,7 @@
 
     <!-- Save button + flash region -->
     <div style="margin-top: var(--spacing-3); display: flex; align-items: center; gap: var(--spacing-3);">
-      <button type="submit" class="btn-secondary">[ save ]</button>
+      <button type="submit" class="btn btn-secondary">Save</button>
     </div>
 
     <% if (it.flash) { %>
