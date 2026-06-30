@@ -13,7 +13,7 @@ import {
   getReviewRunPage,
   getReviewRunById,
 } from '../state/review-runs.js';
-import { computeHealthData } from './health.js';
+import { getSetting } from '../state/config-state.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -39,17 +39,42 @@ export async function registerActivityRoutes(
     if (!Number.isFinite(page) || page < 0) page = 0;
 
     const rows = getReviewRunPage(PAGE_SIZE, page * PAGE_SIZE);
-    const health = await computeHealthData(db, store);
-    const csrfToken = await reply.generateCsrf();
+    const csrfToken = await reply.generateCsrf(); // ALWAYS first, both paths (D-07)
 
-    return reply.viewAsync('dashboard/activity', {
+    const isHtmx = req.headers['hx-request'] === 'true'
+      && req.headers['hx-history-restore-request'] !== 'true';
+
+    if (isHtmx) {
+      // Fragment path: return bare activity section content into #content.
+      return reply.code(200).viewAsync('dashboard/activity', {
+        rows,
+        page,
+        pageSize: PAGE_SIZE,
+        csrfToken,
+      });
+    }
+
+    // Full-shell path: pre-render partials to strings then render the shell.
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)(
+      'dashboard/activity',
+      { rows, page, pageSize: PAGE_SIZE, csrfToken },
+    );
+    const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)(
+      'dashboard/partials/sidebar-context',
+      {
+        github_app_slug: getSetting('github_app_slug'),
+        github_app_name: getSetting('github_app_name'),
+        repos: store.repos,
+      },
+    );
+
+    return reply.viewAsync('shell', {
       ...viewGlobals(req),
       title: 'Activity - Open Review',
+      activeSection: 'activity',
+      sectionContent,
+      sidebarContext,
       csrfToken,
-      rows,
-      page,
-      pageSize: PAGE_SIZE,
-      health,
     }, { layout: 'layout.eta' });
   });
 

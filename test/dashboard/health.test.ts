@@ -108,8 +108,10 @@ describe('Health aggregation partial (DACT-03)', () => {
     expect(res.body as string).toContain('1');  // running count
   });
 
-  // DACT-03: provider and credential presence
-  it('GET /activity/partial reflects the active provider and credential presence', async () => {
+  // DACT-03: provider and credential presence -- retargeted to /settings/health/partial
+  // D-06 (plan 07-03) moved provider + credential info off /activity/partial and onto the
+  // Health sub-page. This test now asserts on the new health endpoint instead.
+  it('GET /settings/health/partial reflects the active provider and credential presence', async () => {
     const cookie = await login();
 
     // Default provider is 'claude'; no credential set yet
@@ -117,7 +119,7 @@ describe('Health aggregation partial (DACT-03)', () => {
 
     const res1 = await server.inject({
       method: 'GET',
-      url: '/activity/partial',
+      url: '/settings/health/partial',
       headers: { cookie },
     });
 
@@ -130,14 +132,15 @@ describe('Health aggregation partial (DACT-03)', () => {
 
     const res2 = await server.inject({
       method: 'GET',
-      url: '/activity/partial',
+      url: '/settings/health/partial',
       headers: { cookie },
     });
 
     expect(res2.statusCode).toBe(200);
-    // The credential presence indicator must appear (plan 03 determines exact copy)
-    // Assert on stable token: body should still mention 'claude'
+    // The credential presence indicator must appear on the health partial
+    // Assert on stable token: body should mention 'claude' (provider) and credential indicator
     expect(res2.body as string).toContain('claude');
+    expect(res2.body as string).toContain('credential present');
   });
 
   // DACT-03: last review from review_runs
