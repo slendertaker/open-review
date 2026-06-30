@@ -1,0 +1,6 @@
+<div id="health-content"
+     hx-get="/settings/health/partial"
+     hx-trigger="every 10s"
+     hx-swap="innerHTML">
+  <%~ include('./health', it) %>
+</div>
