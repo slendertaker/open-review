@@ -67,3 +67,13 @@ export function appLevelOctokit(creds: AppCredentials): Octokit {
 export function patOctokit(token: string): Octokit {
   return new Octokit({ auth: token });
 }
+
+/**
+ * Build an unauthenticated Octokit client for public API calls
+ * (e.g. the manifest code exchange, which requires no auth).
+ * Centralised here so callers do not import Octokit directly; the
+ * test mock for @octokit/rest is applied uniformly across the module graph.
+ */
+export function unauthOctokit(): Octokit {
+  return new Octokit();
+}

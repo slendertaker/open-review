@@ -74,16 +74,21 @@ const paginateMock = vi.fn().mockImplementation(async (fn: unknown) => {
 });
 
 vi.mock('@octokit/rest', () => ({
-  Octokit: vi.fn().mockImplementation(() => ({
-    rest: {
-      apps: {
-        createFromManifest: createFromManifestMock,
-        listInstallations: vi.fn(),
-        listReposAccessibleToInstallation: vi.fn(),
+  // Use a regular function (not an arrow function) so that `new Octokit()` works
+  // in Vitest 4.x, which calls Reflect.construct on the implementation.
+  // Arrow functions are not constructors and throw in that path.
+  Octokit: vi.fn().mockImplementation(function () {
+    return {
+      rest: {
+        apps: {
+          createFromManifest: createFromManifestMock,
+          listInstallations: vi.fn(),
+          listReposAccessibleToInstallation: vi.fn(),
+        },
       },
-    },
-    paginate: paginateMock,
-  })),
+      paginate: paginateMock,
+    };
+  }),
 }));
 
 vi.mock('@octokit/auth-app', () => ({

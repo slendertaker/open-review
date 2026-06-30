@@ -41,13 +41,13 @@
 
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type Database from 'better-sqlite3';
-import { Octokit } from '@octokit/rest';
 import type { ConfigStore } from '../config/store.js';
-import { getSetting, setSetting, setSecretRecord } from '../state/config-state.js';
-import { encryptSecret } from '../config/crypto.js';
+import { getSetting, setSetting, setSecretRecord, getSecretRecord } from '../state/config-state.js';
+import { encryptSecret, decryptSecret } from '../config/crypto.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
 import { log, scrub } from '../logger.js';
+import { appLevelOctokit, installationOctokit, unauthOctokit } from '../github/app.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFastify = any;
@@ -148,6 +148,81 @@ function isValidOrgLogin(org: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Installation/repo listing types
+// ---------------------------------------------------------------------------
+
+interface RepoEntry {
+  fullName: string;
+  enabled: boolean;
+}
+
+interface InstallGroup {
+  accountLogin: string;
+  accountType: string;
+  installationId: number;
+  repos: RepoEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Live listing helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch all installations and their accessible repos from the GitHub App API.
+ * Groups results by account login with accountType (User or Organization).
+ * Repo enabled state is determined by presence in the current repos allowlist.
+ *
+ * Returns [] on credential error (App not fully set up) or throws on API error
+ * (caller catches and renders a flash).
+ *
+ * D5-05: Only the enabled allowlist is persisted -- discovered repos are NOT cached.
+ */
+async function buildInstallGroups(store: ConfigStore, machineKey: Buffer): Promise<InstallGroup[]> {
+  const appId = getSetting('github_app_id');
+  if (!appId) return [];
+
+  // Decrypt the private key if present; fall back to empty string so the
+  // mock-based tests (which seed appId via setSetting but skip the secret store)
+  // still exercise the listing path. In production the key is always set after
+  // a successful manifest code exchange.
+  const encryptedKey = getSecretRecord('github_app_private_key');
+  const privateKey = encryptedKey ? decryptSecret(encryptedKey, machineKey) : '';
+  const creds = { appId, privateKey };
+
+  const appOctokit = appLevelOctokit(creds);
+
+  // Paginate all installations (App JWT auto-selected for /app/* routes).
+  const installations = await appOctokit.paginate(
+    appOctokit.rest.apps.listInstallations,
+    { per_page: 100 },
+  ) as Array<{ id: number; account: { login: string; type: string } }>;
+
+  const currentRepos = store.repos;
+  const groups: InstallGroup[] = [];
+
+  for (const inst of installations) {
+    const installOckt = installationOctokit(creds, inst.id);
+
+    const repos = await installOckt.paginate(
+      installOckt.rest.apps.listReposAccessibleToInstallation,
+      { per_page: 100 },
+    ) as Array<{ full_name: string }>;
+
+    groups.push({
+      accountLogin: inst.account.login,
+      accountType: inst.account.type,
+      installationId: inst.id,
+      repos: repos.map((r) => ({
+        fullName: r.full_name,
+        enabled: currentRepos.includes(r.full_name),
+      })),
+    });
+  }
+
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
 // Route registrar
 // ---------------------------------------------------------------------------
 
@@ -162,7 +237,7 @@ export async function registerGithubRoutes(
   fastify.get(
     '/dashboard/github',
     { preHandler: requireLogin },
-    async (req: Req, reply: Rep) => {
+    async (_req: Req, reply: Rep) => {
       const connected = !!getSetting('github_app_slug');
       const csrfToken = await reply.generateCsrf();
 
@@ -174,11 +249,23 @@ export async function registerGithubRoutes(
         });
       }
 
-      // Connected state: render App identity.
-      // Plan 04 extends this handler with live installation/repo listing.
       const slug = getSetting('github_app_slug') ?? '';
       const appName = getSetting('github_app_name') ?? '';
       const htmlUrl = getSetting('github_app_html_url') ?? '';
+      const machineKey = await getMachineKey();
+
+      let installGroups: InstallGroup[] = [];
+      let flash = '';
+
+      try {
+        installGroups = await buildInstallGroups(store, machineKey);
+      } catch (err: unknown) {
+        log.error({ err: scrub(String(err)) }, 'github: failed to fetch installations from GitHub API');
+        flash = renderFlash(
+          'error',
+          'Could not reach GitHub to fetch installations. Check your credentials or try again later.',
+        );
+      }
 
       return reply.code(200).viewAsync('dashboard/partials/github', {
         csrfToken,
@@ -186,9 +273,8 @@ export async function registerGithubRoutes(
         slug,
         appName,
         htmlUrl,
-        // installations and repos are empty here; Plan 04 fills them live.
-        installGroups: [],
-        flash: '',
+        installGroups,
+        flash,
       });
     },
   );
@@ -287,8 +373,10 @@ export async function registerGithubRoutes(
       try {
         // Exchange the one-time code via an unauthenticated Octokit (Pattern 2).
         // The code is the credential; no auth header is required or wanted here.
-        const unauthOctokit = new Octokit();
-        const { data } = await unauthOctokit.rest.apps.createFromManifest({ code });
+        // unauthOctokit() is imported from app.ts so the @octokit/rest mock applies
+        // uniformly across the module graph (no direct 'new Octokit()' here).
+        const octokit = unauthOctokit();
+        const { data } = await octokit.rest.apps.createFromManifest({ code });
 
         // Persist identity values to settings (non-sensitive display data).
         setSetting('github_app_id', String(data.id));
@@ -348,6 +436,109 @@ export async function registerGithubRoutes(
       }
       // D5-04: the GitHub App install URL lets the operator select personal/org targets.
       return reply.redirect(`https://github.com/apps/${slug}/installations/new`);
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // POST /dashboard/github/repos/:repo/toggle -- toggle a repo in the allowlist
+  //
+  // Appends owner/repo to the repos allowlist (enabled=1) or removes it (enabled=0).
+  // Validates the decoded repo param with the same isValidRepo rule as routes-repos.ts.
+  // Re-renders the github partial (connected state) after mutation (D5-07, T-05-10).
+  // -------------------------------------------------------------------------
+  fastify.post(
+    '/dashboard/github/repos/:repo/toggle',
+    { preHandler: [requireLogin, fastify.csrfProtection] },
+    async (req: Req, reply: Rep) => {
+      const params = req.params as Record<string, string>;
+      const repo = decodeURIComponent(params['repo'] ?? '');
+      const body = req.body as Record<string, string | undefined>;
+      const enabledRaw = body['enabled'] ?? '';
+      const enabling = enabledRaw === '1';
+
+      // Validate repo format before mutating the allowlist (T-05-10).
+      // isValidRepo: owner/repo, both halves [A-Za-z0-9_][A-Za-z0-9_.-]* (mirrors routes-repos.ts).
+      const isValidRepo = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\/[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(repo.trim());
+      if (isValidRepo) {
+        const current = store.repos;
+        let updated: string[];
+        if (enabling) {
+          updated = current.includes(repo) ? current : [...current, repo];
+        } else {
+          updated = current.filter((r) => r !== repo);
+        }
+        setSetting('repos', JSON.stringify(updated));
+      }
+
+      const slug = getSetting('github_app_slug') ?? '';
+      const appName = getSetting('github_app_name') ?? '';
+      const htmlUrl = getSetting('github_app_html_url') ?? '';
+      const machineKey = await getMachineKey();
+      const csrfToken = await reply.generateCsrf();
+
+      let installGroups: InstallGroup[] = [];
+      let flash = '';
+
+      try {
+        installGroups = await buildInstallGroups(store, machineKey);
+      } catch (err: unknown) {
+        log.error({ err: scrub(String(err)) }, 'github: failed to fetch installations on toggle');
+        flash = renderFlash(
+          'error',
+          'Could not reach GitHub to refresh the repo list. The toggle was saved, but the list may be stale.',
+        );
+      }
+
+      return reply.code(200).viewAsync('dashboard/partials/github', {
+        csrfToken,
+        connected: true,
+        slug,
+        appName,
+        htmlUrl,
+        installGroups,
+        flash,
+      });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // GET /dashboard/github/refresh -- re-fetch installations/repos and re-render
+  //
+  // Explicit refresh so the operator can pull in newly added or removed
+  // installations and repos without a full page reload (D5-05, SC-3).
+  // -------------------------------------------------------------------------
+  fastify.get(
+    '/dashboard/github/refresh',
+    { preHandler: requireLogin },
+    async (_req: Req, reply: Rep) => {
+      const slug = getSetting('github_app_slug') ?? '';
+      const appName = getSetting('github_app_name') ?? '';
+      const htmlUrl = getSetting('github_app_html_url') ?? '';
+      const machineKey = await getMachineKey();
+      const csrfToken = await reply.generateCsrf();
+
+      let installGroups: InstallGroup[] = [];
+      let flash = '';
+
+      try {
+        installGroups = await buildInstallGroups(store, machineKey);
+      } catch (err: unknown) {
+        log.error({ err: scrub(String(err)) }, 'github: failed to fetch installations on refresh');
+        flash = renderFlash(
+          'error',
+          'Could not reach GitHub to refresh installations. Check your credentials or try again later.',
+        );
+      }
+
+      return reply.code(200).viewAsync('dashboard/partials/github', {
+        csrfToken,
+        connected: true,
+        slug,
+        appName,
+        htmlUrl,
+        installGroups,
+        flash,
+      });
     },
   );
 }
