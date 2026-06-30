@@ -79,4 +79,46 @@ describe('DEPL-02 dist/ template build-output guard', () => {
     expect(html).not.toContain(failureMode);
     expect(html).toContain('<main id="smoke">ok</main>');
   });
+
+  it('dist/views contains the auth page templates', () => {
+    expect(
+      existsSync(path.join(DIST_VIEWS, 'login.eta')),
+      'dist/views/login.eta not found -- run `npm run build` (the deployed dist/ layout the runtime renders from must contain the auth templates)',
+    ).toBe(true);
+
+    expect(
+      existsSync(path.join(DIST_VIEWS, 'setup.eta')),
+      'dist/views/setup.eta not found -- run `npm run build` (the deployed dist/ layout the runtime renders from must contain the auth templates)',
+    ).toBe(true);
+  });
+
+  it('login.eta renders from the built dist/ output with the layout', async () => {
+    if (!existsSync(path.join(DIST_VIEWS, 'login.eta'))) {
+      return;
+    }
+
+    const eta = new Eta({ views: DIST_VIEWS });
+
+    // login.eta is a body fragment; render it first, then compose with layout.
+    const body = await eta.renderAsync('login', {
+      title: 'Sign in - Open Review',
+      csrfToken: 'test-csrf',
+      flashError: null,
+      showNoDomainBanner: false,
+      theme: 'dark',
+      cssVersion: 'test',
+    });
+
+    const html = await eta.renderAsync('layout.eta', {
+      title: 'Sign in - Open Review',
+      theme: 'dark',
+      cssVersion: 'test',
+      body,
+    });
+
+    expect(html).toContain('class="centered-card-wrapper"');
+    expect(html).toContain('or_theme');
+    expect(html).toContain('type="password"');
+    expect(html).toContain('data-theme=');
+  });
 });
