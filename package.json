@@ -10,6 +10,7 @@
     "dev": "tsx watch src/index.ts",
     "start:dev": "NODE_OPTIONS=--max-old-space-size=384 tsx src/index.ts",
     "build": "tsc -p tsconfig.json && cp src/state/schema.sql dist/src/state/schema.sql && rm -rf dist/views dist/public && cp -r views dist/views && cp -r public dist/public",
+    "prestart": "node -e \"const fs=require('fs');const d='dist/public/fonts';let files=[];try{files=fs.readdirSync(d).filter(f=>f.endsWith('.woff2'))}catch(e){}if(files.length===0){console.error('ERROR: no woff2 files found in '+d+' - run npm run build first');process.exit(1)}\"",
     "start": "NODE_OPTIONS=--max-old-space-size=384 node dist/src/index.js",
     "test": "vitest run",
     "test:dot": "vitest run --reporter=dot",
