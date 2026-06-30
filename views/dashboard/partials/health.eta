@@ -1,6 +1,6 @@
 <section style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
   <div class="section-header">
-    <span class="bracket-prefix">[+]</span>
+    <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">Service health</h2>
   </div>
 
@@ -18,13 +18,12 @@
       <% if (it.health.lastRun) { %>
         <%
           const lr = it.health.lastRun;
-          let lrMarker = '[?]';
-          if (lr.status === 'success')      { lrMarker = '[+]'; }
-          else if (lr.status === 'failed')  { lrMarker = '[x]'; }
-          else if (lr.status === 'running') { lrMarker = '[~]'; }
-          else if (lr.status === 'rate_limited') { lrMarker = '[!]'; }
+          let lrIcon = 'check';
+          if (lr.status === 'failed')       { lrIcon = 'x'; }
+          else if (lr.status === 'running') { lrIcon = 'loader'; }
+          else if (lr.status === 'rate_limited') { lrIcon = 'alert'; }
         %>
-        <span class="bracket-prefix" style="font-family: monospace;"><%= lrMarker %></span>
+        <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: lrIcon }) %></span>
         <a href="/activity/<%= lr.id %>" style="color: var(--color-text-primary); text-decoration: none;">
           <%= lr.owner %>/<%= lr.repo %> #<%= lr.pr_number %>
         </a>

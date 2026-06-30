@@ -25,13 +25,13 @@
           </div>
 
           <% if (it.error) { %>
-            <p class="flash-error" role="alert">[x] <%= it.error %></p>
+            <p class="flash-error" role="alert" style="display:flex;align-items:flex-start;gap:6px;"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span><%= it.error %></p>
           <% } %>
         </form>
       </div>
     <% } else { %>
       <div style="margin-top: var(--spacing-section);">
-        <p class="flash-error" role="alert">[x] This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
+        <p class="flash-error" role="alert" style="display:flex;align-items:flex-start;gap:6px;"><span style="display:inline-flex;align-items:center;flex-shrink:0;"><%~ include('./dashboard/partials/icons', { name: 'x' }) %></span>This setup link is invalid or has already been used. Restart the service to generate a new one.</p>
       </div>
     <% } %>
   </div>

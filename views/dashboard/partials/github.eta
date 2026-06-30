@@ -1,6 +1,6 @@
 <section id="github-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
   <div class="section-header">
-    <span class="bracket-prefix">[+]</span>
+    <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
     <h2 class="heading-md">GitHub</h2>
   </div>
 
@@ -25,7 +25,7 @@
   <!-- Connected state: App identity, live install groups with per-repo toggles, and Refresh -->
   <div style="max-width: 560px;">
     <p class="body-md" style="margin-bottom: var(--spacing-sm);">
-      <span style="color: var(--color-mute);">[+]</span>
+      <span style="color: var(--color-mute); display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
       Connected as <a href="<%= it.htmlUrl %>" class="body-md" target="_blank" rel="noopener noreferrer"><%= it.appName || it.slug %></a>
     </p>
 
@@ -85,14 +85,14 @@
             </div>
             <% }); %>
           <% } else { %>
-          <p class="caption-md" style="color: var(--color-mute);">[x] No repositories accessible for this installation.</p>
+          <p class="caption-md" style="color: var(--color-mute); display:inline-flex;align-items:center;gap:4px;"><%~ include('./icons', { name: 'x' }) %> No repositories accessible for this installation.</p>
           <% } %>
         </div>
         <% }); %>
       <% } else { %>
       <!-- Zero-installation state: prompt the operator to install the App -->
-      <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-sm);">
-        [x] No installations found. Install the App on your personal account or organization to start selecting repositories.
+      <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-sm); display:inline-flex;align-items:center;gap:4px;">
+        <%~ include('./icons', { name: 'x' }) %> No installations found. Install the App on your personal account or organization to start selecting repositories.
       </p>
       <p>
         <a href="/dashboard/github/install" class="btn-secondary">[ Install GitHub App ]</a>

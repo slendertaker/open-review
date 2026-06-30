@@ -8,7 +8,7 @@
 <main class="content-column">
   <section style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl);">
     <div class="section-header">
-      <span class="bracket-prefix">[x]</span>
+      <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./partials/icons', { name: 'x' }) %></span>
       <h2 class="heading-md"><%= it.heading %></h2>
     </div>
     <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-md);"><%= it.message %></p>
