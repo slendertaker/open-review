@@ -2,48 +2,70 @@
      hx-get="/activity/partial"
      hx-trigger="every 5s"
      hx-swap="outerHTML">
-<section id="activity-section" style="border-top: 1px solid var(--color-border); padding-top: var(--spacing-8); margin-bottom: 96px;">
+<section id="activity-section" class="section-card">
   <div class="section-header">
-    <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'loader' }) %></span>
     <h2 class="heading-md">Activity</h2>
   </div>
   <p class="caption-md" style="color: var(--color-text-muted); margin-bottom: var(--spacing-3);">Review history</p>
 
   <% if (!it.rows || it.rows.length === 0) { %>
-  <p class="body-md" style="color: var(--color-text-muted);">No reviews yet.</p>
-  <% } else { %>
-  <div style="border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden;">
-    <% for (const row of it.rows) { %>
-    <%
-      let rowIcon = 'check';
-      let statusClass = 'status-unknown';
-      if (row.status === 'running')      { rowIcon = 'loader'; statusClass = 'status-running'; }
-      else if (row.status === 'success') { rowIcon = 'check';  statusClass = 'status-success'; }
-      else if (row.status === 'failed')  { rowIcon = 'x';      statusClass = 'status-failed'; }
-      else if (row.status === 'rate_limited') { rowIcon = 'alert'; statusClass = 'status-warning'; }
-    %>
-    <div style="display: flex; align-items: baseline; gap: var(--spacing-3); padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border);">
-      <span class="bracket-prefix <%= statusClass %>" style="display:inline-flex;align-items:center;min-width:3ch;"><%~ include('./icons', { name: rowIcon }) %></span>
-      <span class="body-md" style="min-width: 0; flex: 1;">
-        <a href="/activity/<%= row.id %>" style="color: var(--color-text-primary); text-decoration: none;">
-          <%= row.owner %>/<%= row.repo %> #<%= row.pr_number %>
-        </a>
-      </span>
-      <span class="caption-md" style="color: var(--color-text-muted);">mode: <%= row.mode %></span>
-      <span class="caption-md" style="color: var(--color-text-muted);">findings: <%= row.finding_count %></span>
-      <span class="caption-md" style="color: var(--color-text-muted);"><%= row.finished_at ? row.finished_at : row.created_at %></span>
-      <form
-        hx-post="/activity/<%= row.id %>/retrigger"
-        hx-target="#activity-list"
-        hx-swap="outerHTML"
-        style="display: inline;"
-      >
-        <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
-        <button type="submit" class="btn-secondary" style="font-size: 0.75rem; padding: 2px 6px;">[&gt;] Re-review</button>
-      </form>
-    </div>
-    <% } %>
+  <div class="empty-state">
+    <%~ include('./icons', { name: 'x' }) %>
+    <p class="body-md">No reviews yet.</p>
   </div>
+  <% } else { %>
+  <%
+    function statusBadgeClass(status) {
+      const map = { running: 'running', success: 'success', failed: 'failed', rate_limited: 'rate-limited' };
+      return map[status] || 'running';
+    }
+    function severityBadgeClass(severity) {
+      const map = { high: 'high', critical: 'high', medium: 'medium', low: 'low' };
+      return map[severity] || 'low';
+    }
+  %>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th class="caption-md" style="text-align:left; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Status</th>
+        <th class="caption-md" style="text-align:left; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Repository / PR</th>
+        <th class="caption-md" style="text-align:left; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Severity</th>
+        <th class="caption-md" style="text-align:left; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Mode</th>
+        <th class="caption-md" style="text-align:right; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); font-family: 'Geist Mono', monospace;">Findings</th>
+        <th class="caption-md" style="text-align:right; padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); font-family: 'Geist Mono', monospace;">Date</th>
+        <th style="border-bottom: 1px solid var(--color-border);"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% for (const row of it.rows) { %>
+      <tr style="border-bottom: 1px solid var(--color-border);" onmouseenter="this.style.background='var(--color-surface-raised)'" onmouseleave="this.style.background=''">
+        <td style="padding: var(--spacing-2) var(--spacing-3);">
+          <span class="badge badge--<%= statusBadgeClass(row.status) %>"><%= row.status %></span>
+        </td>
+        <td class="body-md" style="padding: var(--spacing-2) var(--spacing-3);">
+          <a href="/activity/<%= row.id %>" style="color: var(--color-text-primary); text-decoration: none;">
+            <%= row.owner %>/<%= row.repo %>
+            <span style="font-family: 'Geist Mono', monospace; color: var(--color-text-muted);">#<%= row.pr_number %></span>
+          </a>
+        </td>
+        <td style="padding: var(--spacing-2) var(--spacing-3);">
+          <% if (row.max_severity) { %>
+          <span class="badge badge--<%= severityBadgeClass(row.max_severity) %>"><%= row.max_severity %></span>
+          <% } %>
+        </td>
+        <td class="caption-md" style="padding: var(--spacing-2) var(--spacing-3); color: var(--color-text-muted);"><%= row.mode %></td>
+        <td class="caption-md" style="padding: var(--spacing-2) var(--spacing-3); text-align: right; font-family: 'Geist Mono', monospace; color: var(--color-text-muted);"><%= row.finding_count %></td>
+        <td class="caption-md" style="padding: var(--spacing-2) var(--spacing-3); text-align: right; font-family: 'Geist Mono', monospace; color: var(--color-text-muted);"><%= row.finished_at ? row.finished_at : row.created_at %></td>
+        <td style="padding: var(--spacing-2) var(--spacing-3);">
+          <form hx-post="/activity/<%= row.id %>/retrigger" hx-target="#activity-list" hx-swap="outerHTML" style="display: inline;">
+            <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+            <button type="submit" class="btn btn-ghost">Re-review</button>
+          </form>
+        </td>
+      </tr>
+      <% } %>
+    </tbody>
+  </table>
   <% } %>
 </section>
 </div>
