@@ -86,8 +86,8 @@
     <!-- Error (if any) -->
     <% if (it.run.error) { %>
     <div style="margin-top: var(--spacing-md); padding: var(--spacing-md); background: var(--color-surface-soft); border-radius: var(--rounded-sm);">
-      <p class="body-md" style="color: var(--color-error);"><strong>Error:</strong></p>
-      <p class="body-md" style="margin-top: var(--spacing-xs); color: var(--color-error);"><%= it.run.error %></p>
+      <p class="body-md" style="color: var(--color-danger);"><strong>Error:</strong></p>
+      <p class="body-md" style="margin-top: var(--spacing-xs); color: var(--color-danger);"><%= it.run.error %></p>
     </div>
     <% } %>
 

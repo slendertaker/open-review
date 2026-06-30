@@ -1,7 +1,7 @@
 <nav class="nav-strip">
   <span class="body-strong">Open Review</span>
   <a href="/activity" class="body-md" style="color: var(--color-mute);">Activity</a>
-  <a href="/dashboard" class="body-md" style="color: var(--color-fg);">Settings</a>
+  <a href="/dashboard" class="body-md" style="color: var(--color-text-primary);">Settings</a>
   <a href="/logout" class="body-md" style="color: var(--color-mute);">Sign out</a>
 </nav>
 

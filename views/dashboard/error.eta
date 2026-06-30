@@ -13,7 +13,7 @@
     </div>
     <p class="body-md" style="color: var(--color-mute); margin-top: var(--spacing-md);"><%= it.message %></p>
     <p class="body-md" style="margin-top: var(--spacing-lg);">
-      <a href="/activity" style="color: var(--color-fg);">Back to Activity</a>
+      <a href="/activity" style="color: var(--color-text-primary);">Back to Activity</a>
     </p>
   </section>
 </main>

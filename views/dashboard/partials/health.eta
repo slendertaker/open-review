@@ -25,7 +25,7 @@
           else if (lr.status === 'rate_limited') { lrMarker = '[!]'; }
         %>
         <span class="bracket-prefix" style="font-family: monospace;"><%= lrMarker %></span>
-        <a href="/activity/<%= lr.id %>" style="color: var(--color-fg); text-decoration: none;">
+        <a href="/activity/<%= lr.id %>" style="color: var(--color-text-primary); text-decoration: none;">
           <%= lr.owner %>/<%= lr.repo %> #<%= lr.pr_number %>
         </a>
         <span class="caption-md" style="color: var(--color-mute);">(<%= lr.status %>)</span>
@@ -44,7 +44,7 @@
       <% if (it.health.hasOauthToken || it.health.hasApiKey) { %>
         <span class="caption-md" style="color: var(--color-mute);">[credential present]</span>
       <% } else { %>
-        <span class="caption-md" style="color: var(--color-error);">[no credential]</span>
+        <span class="caption-md" style="color: var(--color-danger);">[no credential]</span>
       <% } %>
     </p>
 
@@ -56,7 +56,7 @@
       <% } else if (it.health.cliVersion) { %>
         <span class="caption-md" style="color: var(--color-mute);">v<%= it.health.cliVersion %></span>
       <% } else { %>
-        <span class="caption-md" style="color: var(--color-error);">
+        <span class="caption-md" style="color: var(--color-danger);">
           unreachable<% if (it.health.cliError) { %>: <%= it.health.cliError %><% } %>
         </span>
       <% } %>
