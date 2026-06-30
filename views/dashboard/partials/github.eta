@@ -1,0 +1,100 @@
+<section id="github-section" style="border-top: 1px solid var(--color-hairline); padding-top: var(--spacing-xxl); margin-bottom: var(--spacing-section);">
+  <div class="section-header">
+    <span class="bracket-prefix">[+]</span>
+    <h2 class="heading-md">GitHub</h2>
+  </div>
+
+  <% if (it.flash) { %>
+  <%~ it.flash %>
+  <% } %>
+
+  <% if (it.manifestMode) { %>
+  <!-- Connect mode: auto-submitting manifest form to github.com (top-level nav, not htmx) -->
+  <div style="max-width: 560px;">
+    <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">Redirecting to GitHub to create your App...</p>
+    <% if (it.isHttp) { %>
+    <p class="caption-md" style="color: var(--color-danger); margin-bottom: var(--spacing-md);">Warning: your dashboard is not serving HTTPS. GitHub requires an HTTPS redirect URL. Set a domain in the Access section before connecting.</p>
+    <% } %>
+    <form id="manifest-form" method="post" action="<%= it.githubCreateUrl %>">
+      <input type="hidden" name="manifest" value="<%= it.manifestJson %>">
+    </form>
+    <script>document.getElementById('manifest-form').submit();</script>
+  </div>
+
+  <% } else if (it.connected) { %>
+  <!-- Connected state: App identity + install groups placeholder (Plan 04 fills live listing) -->
+  <div style="max-width: 560px;">
+    <p class="body-md" style="margin-bottom: var(--spacing-sm);">
+      <span style="color: var(--color-mute);">[+]</span>
+      Connected as <a href="<%= it.htmlUrl %>" class="body-md" target="_blank" rel="noopener noreferrer"><%= it.appName || it.slug %></a>
+    </p>
+
+    <p class="caption-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">
+      Newly discovered repositories default to off and must be toggled on before reviews are posted.
+    </p>
+
+    <!-- Installations/repo groups -- populated by Plan 04 -->
+    <div id="github-installs-region">
+      <% if (it.installGroups && it.installGroups.length > 0) { %>
+        <% it.installGroups.forEach(function(group) { %>
+        <div style="margin-bottom: var(--spacing-md);">
+          <p class="body-md" style="color: var(--color-body); margin-bottom: var(--spacing-sm);">
+            <% if (group.accountType === 'Organization') { %>
+            <span style="color: var(--color-mute);">[org]</span> organization: <%= group.accountLogin %>
+            <% } else { %>
+            <span style="color: var(--color-mute);">[user]</span> <%= group.accountLogin %>
+            <% } %>
+          </p>
+          <% if (group.repos && group.repos.length > 0) { %>
+            <% group.repos.forEach(function(repo) { %>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--color-hairline);">
+              <span class="body-md" style="color: var(--color-body);"><%= repo.fullName %></span>
+            </div>
+            <% }); %>
+          <% } else { %>
+          <p class="caption-md" style="color: var(--color-mute);">[x] No repositories accessible for this installation.</p>
+          <% } %>
+        </div>
+        <% }); %>
+      <% } %>
+    </div>
+  </div>
+
+  <% } else { %>
+  <!-- Not-connected state: Connect GitHub button and optional org input -->
+  <div style="max-width: 560px;">
+    <p class="body-md" style="color: var(--color-mute); margin-bottom: var(--spacing-md);">
+      Connect a GitHub App to enable automatic PR reviews. The dashboard creates the App for you -- no manual credential setup required.
+    </p>
+
+    <!-- Org input: optional. When filled, the App is created under the org. -->
+    <!-- The operator must be an org admin to create an App under it. -->
+    <form
+      id="connect-github-form"
+      action="/dashboard/github/connect"
+      method="get"
+      style="margin-bottom: var(--spacing-md);"
+    >
+      <div style="margin-bottom: var(--spacing-sm);">
+        <label for="github-org-input" class="body-md" style="display: block; margin-bottom: var(--spacing-xs);">Organization (optional)</label>
+        <p class="caption-md" style="color: var(--color-mute); margin: 0 0 var(--spacing-xs) 0;">
+          Leave blank to create the App under your personal account.
+          You must be an admin of the organization to create an App under it.
+        </p>
+        <input
+          id="github-org-input"
+          type="text"
+          name="org"
+          class="text-input"
+          placeholder="my-org"
+          pattern="[A-Za-z0-9-]+"
+          style="width: 100%;"
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" class="btn-secondary">[ Connect GitHub ]</button>
+    </form>
+  </div>
+  <% } %>
+
+</section>

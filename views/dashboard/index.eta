@@ -6,6 +6,7 @@
 </nav>
 
 <main class="content-column">
+  <%~ include('./partials/github', it) %>
   <%~ include('./partials/general', it) %>
   <%~ include('./partials/repos', it) %>
   <%~ include('./partials/provider', it) %>
