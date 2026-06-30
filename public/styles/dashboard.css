@@ -299,6 +299,8 @@ select.text-input {
   font-weight: 400;
   line-height: 2.0;
   margin-top: var(--spacing-2);
+  border-left: 3px solid var(--color-success);
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .flash-error {
@@ -308,6 +310,8 @@ select.text-input {
   font-weight: 400;
   line-height: 2.0;
   margin-top: var(--spacing-2);
+  border-left: 3px solid var(--color-danger);
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 .flash-warning {
@@ -317,6 +321,8 @@ select.text-input {
   font-weight: 400;
   line-height: 2.0;
   margin-top: var(--spacing-2);
+  border-left: 3px solid var(--color-warning);
+  padding: var(--spacing-2) var(--spacing-3);
 }
 
 /* -------------------------------------------------------------------------
@@ -558,3 +564,162 @@ select.text-input {
 .status-dot--warning {
   background: var(--color-warning);
 }
+
+/* -------------------------------------------------------------------------
+ * Badge system (CMP-03)
+ * ------------------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.badge--high    { background: rgba(239,68,68,0.15);   color: #ef4444; }
+.badge--medium  { background: rgba(245,158,11,0.15);  color: #f59e0b; }
+.badge--low     { background: rgba(34,197,94,0.15);   color: #22c55e; }
+.badge--success { background: rgba(34,197,94,0.15);   color: #22c55e; }
+.badge--failed  { background: rgba(239,68,68,0.15);   color: #ef4444; }
+.badge--running { background: rgba(161,161,161,0.15); color: var(--color-text-muted); }
+.badge--rate-limited { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+/* -------------------------------------------------------------------------
+ * Section card (CMP-03)
+ * ------------------------------------------------------------------------- */
+
+.section-card {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-8);
+  margin-bottom: 96px;
+}
+
+/* -------------------------------------------------------------------------
+ * Empty state (CMP-04)
+ * ------------------------------------------------------------------------- */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* -------------------------------------------------------------------------
+ * Field toggle -- CSS-only pill for checkbox (CMP-02)
+ * ------------------------------------------------------------------------- */
+
+.field-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+}
+
+.field-toggle {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.field-toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background: var(--color-border-strong);
+  border-radius: 10px;
+  transition: background 150ms ease;
+}
+
+.field-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 150ms ease;
+}
+
+.field-toggle:checked + .field-toggle-track {
+  background: var(--color-accent);
+}
+
+.field-toggle:checked + .field-toggle-track::after {
+  transform: translateX(16px);
+}
+
+.field-toggle:focus-visible + .field-toggle-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+ * Repo card grid (CMP-03)
+ * ------------------------------------------------------------------------- */
+
+.card-repo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+.card-repo {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* -------------------------------------------------------------------------
+ * Onboarding steps (ONB-01)
+ * ------------------------------------------------------------------------- */
+
+.onboarding-steps {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.onboarding-step-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.onboarding-step--done   .onboarding-step-circle { background: var(--color-success); color: #000; }
+.onboarding-step--active .onboarding-step-circle { background: transparent; border: 2px solid var(--color-accent); color: var(--color-accent); }
+.onboarding-step--future .onboarding-step-circle { background: transparent; border: 2px solid var(--color-border-strong); color: var(--color-text-disabled); }
+
+.onboarding-step--done   .caption-md { color: var(--color-text-muted); }
+.onboarding-step--active .caption-md { color: var(--color-text-primary); font-weight: 500; }
+.onboarding-step--future .caption-md { color: var(--color-text-disabled); }
