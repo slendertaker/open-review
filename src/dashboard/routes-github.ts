@@ -450,18 +450,46 @@ export async function registerGithubRoutes(
 
   // -------------------------------------------------------------------------
   // GET /dashboard/github/install -- redirect to the GitHub App install page
+  //
+  // Optional ?org=<login> pre-targets a specific organization by resolving its
+  // numeric account id and appending ?target_id=<id> to the install URL. GitHub
+  // preserves and honours target_id on /installations/new (verified empirically
+  // against the real App: the login redirect carries target_id through return_to).
+  // Any resolution failure falls back to the generic install URL so naming a bad
+  // or unreachable org never blocks the flow -- GitHub's own picker takes over.
   // -------------------------------------------------------------------------
   fastify.get(
     '/dashboard/github/install',
     { preHandler: requireLogin },
-    async (_req: Req, reply: Rep) => {
+    async (req: Req, reply: Rep) => {
       const slug = getSetting('github_app_slug');
       if (!slug) {
         // App not connected yet -- send back to the GitHub section.
         return reply.redirect('/dashboard');
       }
+
       // D5-04: the GitHub App install URL lets the operator select personal/org targets.
-      return reply.redirect(`https://github.com/apps/${slug}/installations/new`);
+      const baseInstallUrl = `https://github.com/apps/${slug}/installations/new`;
+
+      // Optional org targeting: resolve the org login to its numeric account id.
+      const query = req.query as Record<string, string | undefined>;
+      const orgParam = (query['org'] ?? '').trim();
+
+      if (orgParam && isValidOrgLogin(orgParam)) {
+        try {
+          const octokit = unauthOctokit();
+          const { data } = await octokit.rest.orgs.get({ org: orgParam });
+          if (data?.id) {
+            return reply.redirect(`${baseInstallUrl}?target_id=${data.id}`);
+          }
+        } catch (err: unknown) {
+          // Unknown org, rate limit, or network error -- fall through to the
+          // generic install URL rather than failing the flow.
+          log.warn({ err: scrub(String(err)) }, 'github install: org id resolution failed, using generic install URL');
+        }
+      }
+
+      return reply.redirect(baseInstallUrl);
     },
   );
 

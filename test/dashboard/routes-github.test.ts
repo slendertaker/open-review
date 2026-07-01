@@ -65,6 +65,9 @@ const MOCK_REPOS_ORG = [
 // The createFromManifest mock instance (captured for spy assertions)
 const createFromManifestMock = vi.fn().mockResolvedValue(MOCK_CONVERSION_RESPONSE);
 
+// orgs.get mock -- resolves an org login to its numeric account id (install targeting).
+const orgsGetMock = vi.fn();
+
 // paginate mock that dispatches by the endpoint method reference
 const paginateMock = vi.fn().mockImplementation(async (fn: unknown) => {
   // Return different data based on which endpoint is being paginated
@@ -84,6 +87,9 @@ vi.mock('@octokit/rest', () => ({
           createFromManifest: createFromManifestMock,
           listInstallations: vi.fn(),
           listReposAccessibleToInstallation: vi.fn(),
+        },
+        orgs: {
+          get: orgsGetMock,
         },
       },
       paginate: paginateMock,
@@ -577,7 +583,7 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     expect(res.body.toLowerCase()).toContain('organization');
   });
 
-  it('GET /settings/repos renders repo rows for each account (D5-05)', async () => {
+  it('GET /settings/repos shows per-account repo counts on the landing (D5-05)', async () => {
     const cookie = await login();
 
     const res = await server.inject({
@@ -587,11 +593,38 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    // User repos
-    expect(res.body).toContain('myuser/repo-a');
-    expect(res.body).toContain('myuser/repo-b');
-    // Org repos
+    // Landing lists accounts with counts, not individual repo rows.
+    expect(res.body).toContain('2 repos'); // myuser: repo-a + repo-b
+    expect(res.body).toContain('1 repo'); // myorg: repo-c
+  });
+
+  it('GET /settings/repos/:owner renders that account\'s repo rows only (D5-05)', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/repos/myorg',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    // Only the myorg account's repos appear on its per-account page.
     expect(res.body).toContain('myorg/repo-c');
+    // The account heading is present.
+    expect(res.body).toContain('myorg');
+  });
+
+  it('GET /settings/repos/:owner redirects to the landing for an account with no installation', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/repos/not-installed-account',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe('/settings/repos');
   });
 
   it('GET /settings/repos requires authentication (D5-06)', async () => {
@@ -655,5 +688,109 @@ describe('github settings page onboarding steps (ONB-01)', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('onboarding-steps');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test suite: org-targeted install redirect (GET /dashboard/github/install?org=)
+// ---------------------------------------------------------------------------
+
+/**
+ * The install redirect optionally pre-targets an organization by resolving its
+ * login to a numeric account id (unauthenticated GET /orgs/{org}) and appending
+ * ?target_id=<id> to the GitHub install URL. Any resolution failure falls back
+ * to the generic install URL so a bad/unreachable org never blocks the flow.
+ */
+describe('org-targeted install redirect', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any;
+
+  const SLUG = 'open-review-abc123';
+  const INSTALL_BASE = `https://github.com/apps/${SLUG}/installations/new`;
+
+  beforeEach(async () => {
+    const db = openDb(':memory:');
+    const store = new SqliteConfigStore(db, makeKey());
+    const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
+    setSetting('password_hash', hash);
+    setSetting('github_app_slug', SLUG); // App connected
+    server = await buildServer(store, db, () => {}, makeKey());
+    lockoutMap.clear();
+    orgsGetMock.mockReset();
+  });
+
+  afterEach(async () => {
+    await server.close();
+    lockoutMap.clear();
+  });
+
+  async function login(): Promise<string> {
+    const getRes = await server.inject({ method: 'GET', url: '/login' });
+    const csrf = extractCsrf(getRes.body as string);
+    const loginRes = await server.inject({
+      method: 'POST',
+      url: '/login',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie: cookieHeader(getRes) },
+      payload: `password=${encodeURIComponent(PASSWORD)}&_csrf=${encodeURIComponent(csrf)}`,
+    });
+    return cookieHeader(loginRes);
+  }
+
+  it('resolves ?org=<login> to target_id and redirects to the targeted install URL', async () => {
+    orgsGetMock.mockResolvedValue({ data: { id: 424242 } });
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/install?org=myorg',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe(`${INSTALL_BASE}?target_id=424242`);
+    expect(orgsGetMock).toHaveBeenCalledWith({ org: 'myorg' });
+  });
+
+  it('falls back to the generic install URL when org resolution throws', async () => {
+    orgsGetMock.mockRejectedValue(new Error('Not Found'));
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/install?org=ghost-org',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe(INSTALL_BASE);
+  });
+
+  it('skips resolution and redirects generically for an invalid org login', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/install?org=bad_org',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe(INSTALL_BASE);
+    // An invalid login never reaches the GitHub API.
+    expect(orgsGetMock).not.toHaveBeenCalled();
+  });
+
+  it('redirects to the generic install URL when no org is given', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/install',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe(INSTALL_BASE);
+    expect(orgsGetMock).not.toHaveBeenCalled();
   });
 });

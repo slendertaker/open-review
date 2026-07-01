@@ -1,0 +1,92 @@
+<section id="accounts-section" class="section-card">
+  <div class="section-header">
+    <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
+    <h2 class="heading-md">Repositories</h2>
+  </div>
+
+  <% if (it.flash) { %>
+  <%~ it.flash %>
+  <% } %>
+
+  <% if (!it.connected) { %>
+  <div class="empty-state">
+    <%~ include('./icons', { name: 'x' }) %>
+    <p class="body-md">Connect GitHub first to select repositories to review.</p>
+  </div>
+  <% } else { %>
+
+  <%
+    var renderAccountRow = function (acct) {
+      var out = '';
+      out += '<a href="/settings/repos/' + encodeURIComponent(acct.accountLogin) + '"';
+      out += ' hx-get="/settings/repos/' + encodeURIComponent(acct.accountLogin) + '"';
+      out += ' hx-target="#content" hx-swap="innerHTML" hx-push-url="true"';
+      out += ' class="account-row">';
+      out += '<span class="account-row__main">';
+      out += '<span class="status-dot ' + (acct.enabledCount > 0 ? 'status-dot--active' : 'status-dot--muted') + '"></span>';
+      out += '<span class="body-md" style="font-family: \'Geist Mono\', monospace;">' + acct.accountLogin + '</span>';
+      out += '</span>';
+      out += '<span class="caption-md" style="color: var(--color-text-muted);">';
+      out += acct.repoCount + (acct.repoCount === 1 ? ' repo' : ' repos');
+      out += ', ' + acct.enabledCount + ' enabled';
+      out += '</span>';
+      out += '</a>';
+      return out;
+    };
+  %>
+
+  <% var hasAny = (it.personalAccounts.length + it.orgAccounts.length) > 0; %>
+
+  <% if (!hasAny) { %>
+  <div class="empty-state">
+    <%~ include('./icons', { name: 'x' }) %>
+    <p class="body-md">No accounts yet. Install the GitHub App on your personal account or an organization to get started.</p>
+  </div>
+  <% } %>
+
+  <% if (it.personalAccounts.length > 0) { %>
+  <p class="body-md" style="color: var(--color-text-muted); margin: var(--spacing-3) 0 var(--spacing-2) 0; border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-1);">
+    <span style="color: var(--color-text-muted);">[user]</span> Personal account
+  </p>
+  <div class="account-list">
+    <% it.personalAccounts.forEach(function (acct) { %><%~ renderAccountRow(acct) %><% }); %>
+  </div>
+  <% } %>
+
+  <% if (it.orgAccounts.length > 0) { %>
+  <p class="body-md" style="color: var(--color-text-muted); margin: var(--spacing-3) 0 var(--spacing-2) 0; border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-1);">
+    <span style="color: var(--color-text-muted);">[org]</span> Organizations
+  </p>
+  <div class="account-list">
+    <% it.orgAccounts.forEach(function (acct) { %><%~ renderAccountRow(acct) %><% }); %>
+  </div>
+  <% } %>
+
+  <!-- Add another organization: full-page nav to GitHub's install flow, pre-targeted
+       at the named org via /dashboard/github/install?org=<login> (not htmx). -->
+  <div style="margin-top: var(--spacing-4); border-top: 1px solid var(--color-border); padding-top: var(--spacing-3); max-width: 560px;">
+    <form action="/dashboard/github/install" method="get" style="display: flex; align-items: flex-end; gap: var(--spacing-2); flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <label for="add-org-input" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Add another organization</label>
+        <input
+          id="add-org-input"
+          type="text"
+          name="org"
+          class="text-input"
+          placeholder="my-org"
+          pattern="[A-Za-z0-9-]+"
+          style="width: 100%;"
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" class="btn btn-secondary">+ Add organization</button>
+    </form>
+    <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-2) 0 0 0;">
+      Installing on an organization requires being an owner of that org (or having the "GitHub App manager" role).
+      If GitHub does not show the org you expect, it is a permissions limit on GitHub's side, not a problem with Open Review.
+      Leave the field blank to choose a target on GitHub instead.
+    </p>
+  </div>
+
+  <% } %>
+</section>
