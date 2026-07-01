@@ -175,6 +175,13 @@ export async function buildServer(
   // GitHub webhook receiver.
   // Config is read live from the store per request (DCFG-05, D2-03).
   // -------------------------------------------------------------------------
+  // GitHub's App manifest page validates the webhook URL before creation.
+  // Keep this read-only probe separate from the signed POST receiver below.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fastify.get('/webhook', async (_req: any, reply: any) => {
+    return reply.code(200).send({ ok: true });
+  });
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fastify.post('/webhook', async (req: any, reply: any) => {
     const rawBody = req.body as Buffer;
