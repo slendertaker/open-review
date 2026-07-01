@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { openDb } from '../../src/state/db.js';
 import { buildServer } from '../../src/server.js';
 import { SqliteConfigStore } from '../../src/config/sqlite-store.js';
-import { setSetting, getSetting, setSecretRecord, getSecretRecord } from '../../src/state/config-state.js';
+import { setSetting, getSetting, setSecretRecord, getSecretRecord, deleteSetting } from '../../src/state/config-state.js';
 import { lockoutMap } from '../../src/dashboard/auth.js';
 
 // ---------------------------------------------------------------------------
@@ -143,6 +143,7 @@ describe('github connect flow (SC-1, D5-01, D5-02)', () => {
     const store = new SqliteConfigStore(db, makeKey());
     const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
     setSetting('password_hash', hash);
+    setSetting('domain', 'review.example.com');
     server = await buildServer(store, db, () => {}, makeKey());
     lockoutMap.clear();
     createFromManifestMock.mockClear();
@@ -185,6 +186,22 @@ describe('github connect flow (SC-1, D5-01, D5-02)', () => {
     expect(res.body).toContain('.submit()');
   });
 
+  it('GET /dashboard/github/connect blocks manifest creation when no public domain is configured', async () => {
+    deleteSetting('domain');
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/connect',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('Set a public HTTPS domain in Access before connecting GitHub');
+    expect(res.body).not.toContain('manifest-form');
+    expect(res.body).not.toContain('settings/apps/new');
+  });
+
   it('manifest JSON contains required hook_attributes.url ending in /webhook (D5-02)', async () => {
     // RED: route does not exist
     const cookie = await login();
@@ -203,6 +220,22 @@ describe('github connect flow (SC-1, D5-01, D5-02)', () => {
     expect(manifestMatch).not.toBeNull();
     const manifestJson = JSON.parse((manifestMatch![1]!).replace(/&quot;/g, '"'));
     expect(manifestJson.hook_attributes?.url).toMatch(/\/webhook$/);
+  });
+
+  it('manifest JSON does not include unsupported hook_attributes.secret', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/connect',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const manifestMatch = /name="manifest"[^>]*value="([^"]+)"/.exec(res.body);
+    expect(manifestMatch).not.toBeNull();
+    const manifestJson = JSON.parse((manifestMatch![1]!).replace(/&quot;/g, '"'));
+    expect(manifestJson.hook_attributes).not.toHaveProperty('secret');
   });
 
   it('manifest JSON contains redirect_url ending in /dashboard/github/callback (D5-02)', async () => {
@@ -296,6 +329,7 @@ describe('github callback persistence (SC-1, SC-4, D5-03)', () => {
     const store = new SqliteConfigStore(db, makeKey());
     const hash = await argon2.hash(PASSWORD, { type: argon2.argon2id });
     setSetting('password_hash', hash);
+    setSetting('domain', 'review.example.com');
     server = await buildServer(store, db, () => {}, makeKey());
     lockoutMap.clear();
     createFromManifestMock.mockClear();
@@ -692,21 +726,20 @@ describe('github settings page onboarding steps (ONB-01)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test suite: org-targeted install redirect (GET /dashboard/github/install?org=)
+// Test suite: install target picker redirect
 // ---------------------------------------------------------------------------
 
 /**
- * The install redirect optionally pre-targets an organization by resolving its
- * login to a numeric account id (unauthenticated GET /orgs/{org}) and appending
- * ?target_id=<id> to the GitHub install URL. Any resolution failure falls back
- * to the generic install URL so a bad/unreachable org never blocks the flow.
+ * The install redirect sends operators to GitHub's account/org picker. This
+ * mirrors the public GitHub App flow and avoids jumping straight to an existing
+ * installation settings page.
  */
-describe('org-targeted install redirect', () => {
+describe('install target picker redirect', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any;
 
   const SLUG = 'open-review-abc123';
-  const INSTALL_BASE = `https://github.com/apps/${SLUG}/installations/new`;
+  const INSTALL_TARGET_PICKER = `https://github.com/apps/${SLUG}/installations/select_target`;
 
   beforeEach(async () => {
     const db = openDb(':memory:');
@@ -736,51 +769,7 @@ describe('org-targeted install redirect', () => {
     return cookieHeader(loginRes);
   }
 
-  it('resolves ?org=<login> to target_id and redirects to the targeted install URL', async () => {
-    orgsGetMock.mockResolvedValue({ data: { id: 424242 } });
-    const cookie = await login();
-
-    const res = await server.inject({
-      method: 'GET',
-      url: '/dashboard/github/install?org=myorg',
-      headers: { cookie },
-    });
-
-    expect(res.statusCode).toBe(302);
-    expect(res.headers['location']).toBe(`${INSTALL_BASE}?target_id=424242`);
-    expect(orgsGetMock).toHaveBeenCalledWith({ org: 'myorg' });
-  });
-
-  it('falls back to the generic install URL when org resolution throws', async () => {
-    orgsGetMock.mockRejectedValue(new Error('Not Found'));
-    const cookie = await login();
-
-    const res = await server.inject({
-      method: 'GET',
-      url: '/dashboard/github/install?org=ghost-org',
-      headers: { cookie },
-    });
-
-    expect(res.statusCode).toBe(302);
-    expect(res.headers['location']).toBe(INSTALL_BASE);
-  });
-
-  it('skips resolution and redirects generically for an invalid org login', async () => {
-    const cookie = await login();
-
-    const res = await server.inject({
-      method: 'GET',
-      url: '/dashboard/github/install?org=bad_org',
-      headers: { cookie },
-    });
-
-    expect(res.statusCode).toBe(302);
-    expect(res.headers['location']).toBe(INSTALL_BASE);
-    // An invalid login never reaches the GitHub API.
-    expect(orgsGetMock).not.toHaveBeenCalled();
-  });
-
-  it('redirects to the generic install URL when no org is given', async () => {
+  it('redirects to GitHub target picker when no org is given', async () => {
     const cookie = await login();
 
     const res = await server.inject({
@@ -790,7 +779,21 @@ describe('org-targeted install redirect', () => {
     });
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers['location']).toBe(INSTALL_BASE);
+    expect(res.headers['location']).toBe(INSTALL_TARGET_PICKER);
+    expect(orgsGetMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores legacy org query params and still redirects to the target picker', async () => {
+    const cookie = await login();
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/dashboard/github/install?org=myorg',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe(INSTALL_TARGET_PICKER);
     expect(orgsGetMock).not.toHaveBeenCalled();
   });
 });
