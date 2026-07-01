@@ -83,11 +83,50 @@ async function fetchInstallGroups(store: ConfigStore): Promise<{ installGroups: 
   }
 }
 
-/** Build view data for the overview (org/repo picker + status-dot card grid). */
-async function buildOverviewViewData(store: ConfigStore): Promise<Record<string, unknown>> {
+/** One row on the Accounts landing: an account plus its repo/enabled counts. */
+interface AccountSummary {
+  accountLogin: string;
+  accountType: string;
+  repoCount: number;
+  enabledCount: number;
+}
+
+/** Summarise install groups into per-account rows for the Accounts landing. */
+function summarizeAccounts(groups: InstallGroup[]): AccountSummary[] {
+  return groups.map((g) => ({
+    accountLogin: g.accountLogin,
+    accountType: g.accountType,
+    repoCount: g.repos.length,
+    enabledCount: g.repos.filter((r) => r.enabled).length,
+  }));
+}
+
+/** Build view data for the Accounts landing (Personal + Organizations sections). */
+async function buildAccountsViewData(store: ConfigStore): Promise<Record<string, unknown>> {
   const { installGroups, flash } = await fetchInstallGroups(store);
+  const accounts = summarizeAccounts(installGroups);
   return {
-    installGroups,
+    personalAccounts: accounts.filter((a) => a.accountType !== 'Organization'),
+    orgAccounts: accounts.filter((a) => a.accountType === 'Organization'),
+    connected: !!getSetting('github_app_slug'),
+    flash,
+  };
+}
+
+/**
+ * Build view data for one account's repo view (status-dot card grid + picker),
+ * scoped to a single install group. Returns { notFound: true } when the App has
+ * no installation on that account (caller redirects to the Accounts landing).
+ */
+async function buildAccountRepoViewData(store: ConfigStore, owner: string): Promise<Record<string, unknown>> {
+  const { installGroups, flash } = await fetchInstallGroups(store);
+  const group = installGroups.find((g) => g.accountLogin === owner);
+  if (!group) {
+    return { notFound: true };
+  }
+  return {
+    owner,
+    group,
     installGroupsJson: safeJson(pickerGroups(installGroups)),
     connected: !!getSetting('github_app_slug'),
     flash,
@@ -119,20 +158,20 @@ export async function registerRepoSettingsRoutes(
   _db: Database.Database,
 ): Promise<void> {
   // -------------------------------------------------------------------------
-  // GET /settings/repos -- overview: status-dot cards + org/repo picker
+  // GET /settings/repos -- Accounts landing: Personal + Organizations sections
   // -------------------------------------------------------------------------
   fastify.get('/settings/repos', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
     const csrfToken = await reply.generateCsrf();
-    const sectionData = { ...(await buildOverviewViewData(store)), csrfToken };
+    const sectionData = { ...(await buildAccountsViewData(store)), csrfToken };
 
     const isHtmx = req.headers['hx-request'] === 'true'
       && req.headers['hx-history-restore-request'] !== 'true';
 
     if (isHtmx) {
-      return reply.code(200).viewAsync('dashboard/partials/repos-overview', sectionData);
+      return reply.code(200).viewAsync('dashboard/partials/accounts-overview', sectionData);
     }
 
-    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/repos-overview', sectionData);
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/accounts-overview', sectionData);
     const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/sidebar-context', {
       github_app_slug: getSetting('github_app_slug'),
       github_app_name: getSetting('github_app_name'),
@@ -141,6 +180,49 @@ export async function registerRepoSettingsRoutes(
     return reply.viewAsync('shell', {
       ...viewGlobals(req),
       title: 'Repositories - Open Review',
+      activeSection: 'repos',
+      sectionContent,
+      sidebarContext,
+      csrfToken,
+    }, { layout: 'layout.eta' });
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /settings/repos/:owner -- one account's repo view (status-dot grid)
+  // -------------------------------------------------------------------------
+  fastify.get('/settings/repos/:owner', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
+    const params = req.params as { owner: string };
+    const owner = decodeURIComponent(params.owner ?? '');
+
+    if (!isValidSegment(owner)) {
+      return reply.redirect('/settings/repos');
+    }
+
+    const accountData = await buildAccountRepoViewData(store, owner);
+    if (accountData['notFound']) {
+      // App is not installed on this account -- back to the Accounts landing.
+      return reply.redirect('/settings/repos');
+    }
+
+    const csrfToken = await reply.generateCsrf();
+    const sectionData = { ...accountData, csrfToken };
+
+    const isHtmx = req.headers['hx-request'] === 'true'
+      && req.headers['hx-history-restore-request'] !== 'true';
+
+    if (isHtmx) {
+      return reply.code(200).viewAsync('dashboard/partials/account-repos', sectionData);
+    }
+
+    const sectionContent = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/account-repos', sectionData);
+    const sidebarContext = await (fastify.view as (page: string, data: unknown) => Promise<string>)('dashboard/partials/sidebar-context', {
+      github_app_slug: getSetting('github_app_slug'),
+      github_app_name: getSetting('github_app_name'),
+      repos: store.repos,
+    });
+    return reply.viewAsync('shell', {
+      ...viewGlobals(req),
+      title: `${owner} - Open Review`,
       activeSection: 'repos',
       sectionContent,
       sidebarContext,
@@ -250,8 +332,14 @@ export async function registerRepoSettingsRoutes(
       upsertRepoSettings(fullName, { enabled });
 
       const csrfToken = await reply.generateCsrf();
-      return reply.code(200).viewAsync('dashboard/partials/repos-overview', {
-        ...(await buildOverviewViewData(store)),
+      // Re-render the per-account grid the toggle lives on (scoped to :owner).
+      const accountData = await buildAccountRepoViewData(store, owner);
+      if (accountData['notFound']) {
+        // Installation vanished mid-request -- send the client back to the landing.
+        return reply.header('HX-Redirect', '/settings/repos').code(200).send('');
+      }
+      return reply.code(200).viewAsync('dashboard/partials/account-repos', {
+        ...accountData,
         csrfToken,
       });
     },
