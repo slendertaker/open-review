@@ -184,4 +184,23 @@ describe('setup page rendering (AUTH-01, D-06)', () => {
     const res = await server.inject({ method: 'GET', url: `/setup?token=${token}` });
     expect(res.body).toContain('data-theme');
   });
+
+  it('GET /styles/dashboard.css during first-run (no password) returns real CSS, not a redirect to /setup', async () => {
+    const res = await server.inject({ method: 'GET', url: '/styles/dashboard.css?v=dev' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/css');
+    expect(res.statusCode).not.toBe(302);
+  });
+
+  it('GET /fonts/Geist-Variable.woff2 during first-run (no password) returns the font, not a redirect', async () => {
+    const res = await server.inject({ method: 'GET', url: '/fonts/Geist-Variable.woff2' });
+    expect(res.statusCode).not.toBe(302);
+    expect(res.headers['location']).toBeUndefined();
+  });
+
+  it('GET /dashboard during first-run (no password) still redirects to /setup (gate not weakened for real pages)', async () => {
+    const res = await server.inject({ method: 'GET', url: '/dashboard' });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers['location']).toBe('/setup');
+  });
 });
