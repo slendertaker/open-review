@@ -107,7 +107,13 @@ export async function registerSetupRoutes(
       url === '/login' ||
       url === '/healthz' ||
       url.startsWith('/webhook') ||
+      // Static-asset surface (public/ = fonts, styles, vendor) served by @fastify/static.
+      // These MUST bypass the first-run redirect -- layout.eta loads dashboard.css and
+      // the Geist font files on every page, including /setup and /login themselves, so
+      // gating them behind /setup renders both pages with zero styling on first run.
       url.startsWith('/vendor') ||
+      url.startsWith('/styles') ||
+      url.startsWith('/fonts') ||
       url.startsWith('/favicon');
 
     if (isExempt) return;
