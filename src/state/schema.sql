@@ -100,3 +100,14 @@ CREATE TABLE IF NOT EXISTS review_runs (
 
 CREATE INDEX IF NOT EXISTS idx_review_runs_created ON review_runs(id DESC);
 CREATE INDEX IF NOT EXISTS idx_review_runs_pr ON review_runs(pr_id, id DESC);
+
+-- Per-repo settings: enable state plus optional overrides of the global
+-- min-severity / ignore-globs config. NULL override columns mean "inherit
+-- the global default" (SqliteConfigStore.repoConfig merges these).
+CREATE TABLE IF NOT EXISTS repo_settings (
+  full_name    TEXT    PRIMARY KEY,   -- 'owner/repo'
+  enabled      INTEGER NOT NULL DEFAULT 0,
+  min_severity TEXT,                  -- NULL = inherit global default
+  ignore_globs TEXT,                  -- NULL = inherit global default (JSON array)
+  updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);

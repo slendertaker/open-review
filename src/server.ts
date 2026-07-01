@@ -36,11 +36,12 @@ import { verifySignature } from './webhook/verify.js';
 import { shouldProcess } from './webhook/filter.js';
 import { recordDelivery } from './state/deliveries.js';
 import { SqliteSessionStore } from './state/sessions.js';
-import { getSetting, setSetting } from './state/config-state.js';
+import { setSetting } from './state/config-state.js';
 import { registerSetupRoutes } from './dashboard/setup.js';
 import { registerDashboardRoutes } from './dashboard/routes.js';
 import { setSecretsMachineKey } from './dashboard/routes-secrets.js';
 import { setGithubRoutesMachineKey } from './dashboard/routes-github.js';
+import { setRepoSettingsMachineKey } from './dashboard/routes-repo-settings.js';
 import { log } from './logger.js';
 import type { ConfigStore } from './config/store.js';
 import type Database from 'better-sqlite3';
@@ -68,6 +69,7 @@ export async function buildServer(
   if (machineKey) {
     setSecretsMachineKey(machineKey);
     setGithubRoutesMachineKey(machineKey);
+    setRepoSettingsMachineKey(machineKey);
   }
   // trustProxy scoped to loopback only -- required for secure:'auto' cookie behavior
   // behind a same-host Caddy (D2-11, Pitfall 2) WITHOUT trusting an arbitrary
@@ -201,7 +203,6 @@ export async function buildServer(
       repos: store.repos,
       skipDrafts: store.skipDrafts,
       skipForks: store.skipForks,
-      appConnected: !!getSetting('github_app_slug'), // live read per webhook (D5-07)
     });
 
     if (!filterResult.process) {

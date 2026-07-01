@@ -12,6 +12,7 @@ import Database from 'better-sqlite3';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SqliteConfigStore, seedFromEnvIfEmpty } from '../../src/config/sqlite-store.js';
 import { initConfig, setSetting, setSecretRecord } from '../../src/state/config-state.js';
+import { initRepoSettings, upsertRepoSettings } from '../../src/state/repo-settings.js';
 import { DEFAULT_IGNORE_GLOBS } from '../../src/config/store.js';
 import { encryptSecret } from '../../src/config/crypto.js';
 
@@ -27,6 +28,14 @@ const SCHEMA_SQL = `
     encrypted  TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS repo_settings (
+    full_name    TEXT PRIMARY KEY,
+    enabled      INTEGER NOT NULL DEFAULT 0,
+    min_severity TEXT,
+    ignore_globs TEXT,
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `;
 
 const TEST_KEY = Buffer.alloc(32, 0x01);
@@ -35,6 +44,7 @@ function createTestDb(): Database.Database {
   const db = new Database(':memory:');
   db.pragma('journal_mode = WAL');
   db.exec(SCHEMA_SQL);
+  initRepoSettings(db);
   return db;
 }
 
@@ -125,8 +135,9 @@ describe('SqliteConfigStore -- live getter propagation (DCFG-05)', () => {
     expect(store.webhookSecret).toBe('updated-secret');
   });
 
-  it('repos round-trips a JSON array written under the settings key', () => {
-    setSetting('repos', JSON.stringify(['owner/repo1', 'owner/repo2']));
+  it('repos reflects enabled rows in the repo_settings table', () => {
+    upsertRepoSettings('owner/repo1', { enabled: true });
+    upsertRepoSettings('owner/repo2', { enabled: true });
     expect(store.repos).toEqual(['owner/repo1', 'owner/repo2']);
   });
 });
@@ -161,11 +172,6 @@ describe('SqliteConfigStore -- secret storage (DCFG-02, DCFG-01)', () => {
     expect(store.anthropicApiKey).toBe('sk-ant-api03-test');
   });
 
-  it('githubToken decrypts to the stored value', () => {
-    const encrypted = encryptSecret('ghp_testtoken', TEST_KEY);
-    setSecretRecord('github_token', encrypted);
-    expect(store.githubToken).toBe('ghp_testtoken');
-  });
 });
 
 describe('seedFromEnvIfEmpty -- one-way bootstrap guard (DCFG-01, Pitfall 4)', () => {

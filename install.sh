@@ -164,7 +164,6 @@ if [ ! -f "$ENV_FILE" ]; then
   {
     [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]       && echo "CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN"   || true
     [ -n "${ANTHROPIC_API_KEY:-}" ]             && echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"               || true
-    [ -n "${GITHUB_TOKEN:-}" ]                  && echo "GITHUB_TOKEN=$GITHUB_TOKEN"                         || true
     [ -n "${GITHUB_APP_ID:-}" ]                 && echo "GITHUB_APP_ID=$GITHUB_APP_ID"                       || true
     [ -n "${GITHUB_APP_PRIVATE_KEY_PATH:-}" ]   && echo "GITHUB_APP_PRIVATE_KEY_PATH=$GITHUB_APP_PRIVATE_KEY_PATH" || true
     [ -n "${OPEN_REVIEW_REPOS:-}" ]             && echo "OPEN_REVIEW_REPOS=$OPEN_REVIEW_REPOS"               || true

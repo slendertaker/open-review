@@ -237,30 +237,6 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     lockoutMap.clear();
   });
 
-  it('POST /dashboard/settings/secrets with a webhook secret value saves and returns a presence indicator (WR-02)', async () => {
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-    const secretValue = 'my-super-secret-webhook-value-1234';
-
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `webhookSecret=${encodeURIComponent(secretValue)}&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('secrets-section');
-    expect(res.body).toContain('Secrets saved.');
-
-    // WR-02: the webhook HMAC secret is shown as a presence indicator only --
-    // no characters of the plaintext (not even the last 4) are echoed back.
-    expect(res.body).toContain('(set)');
-    expect(res.body).not.toContain(secretValue);
-    // The trailing 4 chars must NOT appear (they would under the old last-4 mask).
-    expect(res.body).not.toContain(`••••${secretValue.slice(-4)}`);
-  });
-
   it('POST /dashboard/settings/secrets response contains NO plaintext secret values', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
@@ -279,31 +255,6 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     // But it must contain the masked preview
     const masked = maskSecret(oauthToken);
     expect(res.body).toContain(masked);
-  });
-
-  it('blank submit preserves previously stored secret', async () => {
-    // Store a secret first
-    const originalSecret = 'original-secret-value-9876';
-    setSecretRecord('webhook_secret_val', encryptSecret(originalSecret, KEY));
-
-    // Actually set it via the store pattern
-    const webhookPreStored = 'initial-webhook-secret-xxxx';
-    setSetting('webhook_secret', webhookPreStored);
-
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    // Submit blank webhook secret
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `webhookSecret=&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    // webhook_secret setting should still be the pre-stored value (not overwritten)
-    expect(store.webhookSecret).toBe(webhookPreStored);
   });
 
   it('blank submit for secret field leaves encrypted value unchanged', async () => {
@@ -338,7 +289,7 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
       method: 'POST',
       url: '/dashboard/settings/secrets',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `webhookSecret=${encodeURIComponent(secretValue)}&_csrf=${encodeURIComponent(csrf)}`,
+      payload: `claudeOauthToken=${encodeURIComponent(secretValue)}&_csrf=${encodeURIComponent(csrf)}`,
     });
 
     // Get a fresh CSRF and re-render the dashboard
@@ -434,47 +385,6 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     expect(stored).not.toContain(' ');
   });
 
-  it('save strips internal whitespace from githubToken (T-jr6-03)', async () => {
-    const baseToken = 'ghp_testGithubPATtokenWithInternalSpaceInjected1234';
-    const corruptedToken = baseToken.slice(0, 10) + ' ' + baseToken.slice(10);
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `githubToken=${encodeURIComponent(corruptedToken)}&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    const stored = store.githubToken;
-    expect(stored).toBe(corruptedToken.replace(/\s+/g, ''));
-    expect(stored).not.toContain(' ');
-  });
-
-  it('save preserves PEM newlines and spaces for githubAppPrivateKey (T-jr6-03)', async () => {
-    // A minimal fake PEM with real newlines and a space in the header line.
-    const fakePem = '-----BEGIN PRIVATE KEY-----\nline one with spaces inside\n-----END PRIVATE KEY-----';
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `githubAppPrivateKey=${encodeURIComponent(fakePem)}&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    // Read back via store getter (decrypts the stored value)
-    const stored = store.githubAppPrivateKey;
-    // The PEM must be stored byte-for-byte -- newlines and internal spaces intact
-    expect(stored).toBe(fakePem);
-    expect(stored).toContain('\n');
-    expect(stored).toContain('with spaces inside');
-  });
-
   it('blank submit still preserves the existing token after whitespace-stripping change (T-jr6-03)', async () => {
     // Pre-store a token directly (no whitespace -- already clean)
     const originalToken = 'sk-ant-original-clean-token-abcdefgh1234';
@@ -496,44 +406,6 @@ describe('Secrets section (DCFG-02, DCFG-05) -- Plan 04 Task 2', () => {
     expect(store.claudeOauthToken).toBe(originalToken);
   });
 
-  it('PEM private key shows (PEM key set) indicator when set', async () => {
-    const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1234\n-----END RSA PRIVATE KEY-----';
-    const encrypted = encryptSecret(pem, KEY);
-    setSecretRecord('github_app_private_key', encrypted);
-
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    // Re-render to see the current state
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `githubAppPrivateKey=&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('(PEM key set)');
-    expect(res.body).not.toContain(pem);
-  });
-
-  it('saves PAT and returns ghp_ prefixed masked preview', async () => {
-    const pat = 'ghp_testPatValue1234567890abcde';
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/settings/secrets',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `githubToken=${encodeURIComponent(pat)}&_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    const masked = maskSecret(pat, 'ghp_');
-    expect(res.body).toContain(masked);
-    expect(res.body).not.toContain(pat);
-  });
 });
 
 // ---------------------------------------------------------------------------

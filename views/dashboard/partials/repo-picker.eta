@@ -1,0 +1,44 @@
+<!-- Org / repo breadcrumb picker. Navigates via a full page load on repo select. -->
+<div class="repo-picker" style="display:flex;align-items:center;gap:var(--spacing-2);margin-bottom:var(--spacing-3);flex-wrap:wrap;">
+  <span class="body-md" style="color: var(--color-text-muted);">Open Review</span>
+  <span class="body-md" style="color: var(--color-text-muted);">/</span>
+  <select id="repo-picker-org" class="text-input" style="width:auto;"></select>
+  <span class="body-md" style="color: var(--color-text-muted);">/</span>
+  <select id="repo-picker-repo" class="text-input" style="width:auto;"></select>
+</div>
+
+<script>
+(function () {
+  var groups = <%~ it.installGroupsJson %>;
+  var currentOwner = <%~ JSON.stringify(it.owner || '') %>;
+  var currentRepo = <%~ JSON.stringify(it.repo || '') %>;
+
+  var orgSelect = document.getElementById('repo-picker-org');
+  var repoSelect = document.getElementById('repo-picker-repo');
+  if (!orgSelect || !repoSelect) return;
+
+  orgSelect.innerHTML = groups.map(function (g) {
+    return '<option value="' + g.accountLogin + '">' + g.accountLogin + '</option>';
+  }).join('');
+  if (currentOwner) orgSelect.value = currentOwner;
+
+  function populateRepos() {
+    var group = groups.filter(function (g) { return g.accountLogin === orgSelect.value; })[0];
+    var repos = group ? group.repos : [];
+    repoSelect.innerHTML = repos.map(function (r) {
+      var name = r.fullName.split('/')[1];
+      return '<option value="' + r.fullName + '">' + name + '</option>';
+    }).join('');
+    if (currentRepo && group && group.accountLogin === currentOwner) {
+      repoSelect.value = currentOwner + '/' + currentRepo;
+    }
+  }
+  populateRepos();
+
+  orgSelect.addEventListener('change', populateRepos);
+  repoSelect.addEventListener('change', function () {
+    if (!repoSelect.value) return;
+    window.location.href = '/settings/repos/' + repoSelect.value;
+  });
+})();
+</script>

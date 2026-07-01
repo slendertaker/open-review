@@ -421,11 +421,12 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     expect(res.body as string).toContain('class="badge');
   });
 
-  // DACT-04 + JobPayload optionality: PAT mode omits installationId
+  // DACT-04 + JobPayload optionality: a historical row with no installation_id
+  // recorded should not synthesize one on retrigger.
   it('POST /activity/:id/retrigger omits installationId from the payload when the stored row has installation_id NULL', async () => {
     const cookie = await login();
 
-    // Insert a PAT-mode row (installation_id null)
+    // Insert a row with no installation_id recorded (legacy/historical data)
     const id = insertReviewRun({
       prId: 'myorg/myrepo#10',
       owner: 'myorg',
@@ -452,7 +453,7 @@ describe('Activity feed + detail + re-trigger (DACT-01, DACT-02, DACT-04)', () =
     expect(enqueueCalls).toHaveLength(1);
 
     const parsed = JSON.parse(enqueueCalls[0]!.payload) as Record<string, unknown>;
-    // installationId must be absent (or undefined) in PAT mode
+    // installationId must be absent (or undefined) when none was recorded
     expect(parsed['installationId']).toBeUndefined();
     expect('installationId' in parsed).toBe(false);
   });

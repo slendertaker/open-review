@@ -41,7 +41,7 @@ import {
   getPostedFingerprints,
   recordPostedFingerprints,
 } from '../state/reviews.js';
-import { installationOctokit, installationToken, patOctokit } from '../github/app.js';
+import { installationOctokit, installationToken } from '../github/app.js';
 
 /**
  * Assert that the provider subprocess succeeded (exit code 0).
@@ -102,28 +102,21 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
   const resolvedOauthToken = config.claudeOauthToken;
   const resolvedApiKey = config.anthropicApiKey;
 
-  // Step 1: Resolve GitHub auth.
-  let githubToken: string;
-  let octokit: ReturnType<typeof installationOctokit> | undefined;
-
+  // Step 1: Resolve GitHub auth (App mode only -- the GitHub App connect flow
+  // is the sole auth path; see D5 series).
   if (
-    config.githubAppId &&
-    config.githubAppPrivateKey &&
-    job.installationId !== undefined
+    !config.githubAppId ||
+    !config.githubAppPrivateKey ||
+    job.installationId === undefined
   ) {
-    const creds = { appId: config.githubAppId, privateKey: config.githubAppPrivateKey };
-    githubToken = await installationToken(creds, job.installationId);
-    octokit = installationOctokit(creds, job.installationId);
-  } else {
-    const pat = config.githubToken ?? process.env['GITHUB_TOKEN'];
-    if (!pat) {
-      throw new Error(
-        'No GitHub auth available: set GITHUB_APP_ID + GITHUB_APP_PRIVATE_KEY (App mode) or GITHUB_TOKEN (PAT mode)',
-      );
-    }
-    githubToken = pat;
-    octokit = patOctokit(pat);
+    throw new Error(
+      'No GitHub auth available: connect the GitHub App from the dashboard',
+    );
   }
+
+  const creds = { appId: config.githubAppId, privateKey: config.githubAppPrivateKey };
+  const githubToken = await installationToken(creds, job.installationId);
+  const octokit = installationOctokit(creds, job.installationId);
 
   const { wtDir, bareDir } = await acquireWorktree(
     job.owner,
@@ -135,13 +128,17 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
   try {
     const prId = `${job.owner}/${job.repo}#${job.prNumber}`;
 
+    // Effective per-repo severity/ignore-globs, merging any repo_settings
+    // override with the global defaults.
+    const repoConfig = config.repoConfig(`${job.owner}/${job.repo}`);
+
     // Step 3: Incremental vs full review (INCR-01).
     const lastSha = getLastReviewedSha(prId);
     const incremental =
       lastSha !== null && (await isAncestor(bareDir, lastSha, job.headSha));
     const diffBase = incremental ? (lastSha as string) : job.baseSha;
 
-    const diff = await getDiff(bareDir, diffBase, job.headSha, config.ignoreGlobs);
+    const diff = await getDiff(bareDir, diffBase, job.headSha, repoConfig.ignoreGlobs);
     const guidelines = await readProjectGuidelines(wtDir);
 
     const prompt = buildPrompt(diff, job, wtDir, {
@@ -165,7 +162,7 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
     const seen = getPostedFingerprints(prId);
     const freshFindings = parsed.findings
       .filter((f) => !seen.has(fingerprintFinding(f)))
-      .filter((f) => meetsMinSeverity(f.severity, config.minSeverity));
+      .filter((f) => meetsMinSeverity(f.severity, repoConfig.minSeverity));
 
     log.info(
       {
@@ -190,7 +187,7 @@ export async function runReview(job: JobPayload, config: ConfigStore): Promise<J
       findings: freshFindings,
       summary: parsed.summary,
       diffMap,
-      ignoreGlobs: config.ignoreGlobs,
+      ignoreGlobs: repoConfig.ignoreGlobs,
     });
 
     // Step 10: Record state after successful review+post.

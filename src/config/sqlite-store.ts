@@ -29,6 +29,12 @@ import {
   setSecretRecord,
   countConfigRows,
 } from '../state/config-state.js';
+import {
+  getRepoSettings,
+  upsertRepoSettings,
+  listEnabledFullNames,
+  countRepoSettings,
+} from '../state/repo-settings.js';
 
 // ---------------------------------------------------------------------------
 // SqliteConfigStore
@@ -71,13 +77,7 @@ export class SqliteConfigStore implements ConfigStore {
   }
 
   get repos(): string[] {
-    const raw = this.readSetting('repos');
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw) as string[];
-    } catch {
-      return [];
-    }
+    return listEnabledFullNames();
   }
 
   get minSeverity(): MinSeverity {
@@ -109,6 +109,21 @@ export class SqliteConfigStore implements ConfigStore {
     }
   }
 
+  /**
+   * Effective per-repo severity/ignore-globs, merging any repo_settings
+   * override with the global defaults (null override = inherit global).
+   */
+  repoConfig(fullName: string): { minSeverity: MinSeverity; ignoreGlobs: string[] } {
+    const row = getRepoSettings(fullName);
+    const minSeverity =
+      row?.minSeverity === 'low' || row?.minSeverity === 'medium' ||
+      row?.minSeverity === 'high' || row?.minSeverity === 'critical'
+        ? row.minSeverity
+        : this.minSeverity;
+    const ignoreGlobs = row?.ignoreGlobs ?? this.ignoreGlobs;
+    return { minSeverity, ignoreGlobs };
+  }
+
   get provider(): string {
     return this.readSetting('provider') ?? 'claude';
   }
@@ -131,10 +146,6 @@ export class SqliteConfigStore implements ConfigStore {
 
   get anthropicApiKey(): string | undefined {
     return this.readSecret('anthropic_api_key');
-  }
-
-  get githubToken(): string | undefined {
-    return this.readSecret('github_token');
   }
 
   get githubAppId(): string | undefined {
@@ -181,7 +192,9 @@ export function seedFromEnvIfEmpty(db: Database.Database, machineKey: Buffer): v
   const reposEnv = readEnv('OPEN_REVIEW_REPOS');
   if (reposEnv) {
     const repos = reposEnv.split(',').map((r) => r.trim()).filter(Boolean);
-    setSetting('repos', JSON.stringify(repos));
+    for (const fullName of repos) {
+      upsertRepoSettings(fullName, { enabled: true });
+    }
   }
 
   const minSev = readEnv('OPEN_REVIEW_MIN_SEVERITY');
@@ -210,7 +223,6 @@ export function seedFromEnvIfEmpty(db: Database.Database, machineKey: Buffer): v
 
   seedSecret('CLAUDE_CODE_OAUTH_TOKEN', 'claude_oauth_token');
   seedSecret('ANTHROPIC_API_KEY', 'anthropic_api_key');
-  seedSecret('GITHUB_TOKEN', 'github_token');
   seedSecret('GITHUB_APP_ID', 'github_app_id');
   seedSecret('GITHUB_APP_PRIVATE_KEY', 'github_app_private_key');
 
@@ -226,5 +238,35 @@ export function seedFromEnvIfEmpty(db: Database.Database, machineKey: Buffer): v
         // Key file not readable -- skip silently; operator must configure via dashboard
       }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// migrateLegacyRepos -- one-way backfill from the old `repos` JSON setting
+// ---------------------------------------------------------------------------
+
+/**
+ * One-way migration: copy the legacy `repos` JSON-array setting (written by
+ * the old flat repo allowlist page) into the repo_settings table as enabled
+ * rows, so upgrades keep their previously-enabled repos.
+ *
+ * Guard: only runs when repo_settings is empty. Safe to call on every boot --
+ * a no-op once the table has any row (including a fresh install with none).
+ */
+export function migrateLegacyRepos(): void {
+  if (countRepoSettings() > 0) return;
+
+  const raw = getSetting('repos');
+  if (!raw) return;
+
+  let legacyRepos: string[];
+  try {
+    legacyRepos = JSON.parse(raw) as string[];
+  } catch {
+    return;
+  }
+
+  for (const fullName of legacyRepos) {
+    upsertRepoSettings(fullName, { enabled: true });
   }
 }

@@ -295,168 +295,129 @@ describe('Repositories section (DCFG-03, DCFG-05) -- Plan 03', () => {
   });
 
   // -------------------------------------------------------------------------
-  // POST /dashboard/repos -- add repo
+  // POST /settings/repos/:owner/:repo -- save enabled + severity/globs overrides
   // -------------------------------------------------------------------------
 
-  it('POST /dashboard/repos with valid owner/repo adds it and returns 200', async () => {
+  it('POST /settings/repos/:owner/:repo with enabled=on adds it to store.repos', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
 
     const res = await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
+      url: '/settings/repos/octocat/hello-world',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=octocat%2Fhello-world`,
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on`,
     });
 
     expect(res.statusCode).toBe(200);
     expect(store.repos).toContain('octocat/hello-world');
   });
 
-  it('adding a repo updates store.repos live (DCFG-05)', async () => {
+  it('saving enabled=on updates store.repos live (DCFG-05)', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
 
     await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
+      url: '/settings/repos/myorg/myrepo',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=myorg%2Fmyrepo`,
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on`,
     });
 
     expect(store.repos).toContain('myorg/myrepo');
   });
 
-  it('adding a malformed repo (no slash) returns error flash and does not change allowlist', async () => {
+  it('POST with an invalid owner path segment returns 400 and does not change the allowlist', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
 
     const res = await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
+      url: '/settings/repos/.invalid/hello-world',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=notvalid`,
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on`,
     });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('[x]');
-    // Format error copy from UI-SPEC.
-    expect(res.body).toContain('owner/repo');
-    expect(store.repos).not.toContain('notvalid');
+    expect(res.statusCode).toBe(400);
+    expect(store.repos).toEqual([]);
   });
 
-  it('adding a malformed repo (multiple slashes) returns error flash', async () => {
+  it('disabling a previously-enabled repo removes it from the allowlist', async () => {
     const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
+    let csrf = await getAuthCsrf(cookie);
 
-    const res = await server.inject({
-      method: 'POST',
-      url: '/dashboard/repos',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=org%2Frepo%2Fextra`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('[x]');
-  });
-
-  it('adding a duplicate repo returns duplicate error flash without changing the list', async () => {
-    const cookie = await login();
-    const csrf = await getAuthCsrf(cookie);
-
-    // Add first time.
     await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
+      url: '/settings/repos/octocat/hello-world',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=octocat%2Fhello-world`,
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on`,
     });
+    expect(store.repos).toContain('octocat/hello-world');
 
-    // Add again -- duplicate.
-    const csrf2 = await getAuthCsrf(cookie);
+    // Re-submit with the enabled checkbox absent (unchecked).
+    csrf = await getAuthCsrf(cookie);
     const res = await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf2)}&repo=octocat%2Fhello-world`,
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('[x]');
-    // Only one copy.
-    expect(store.repos.filter((r) => r === 'octocat/hello-world').length).toBe(1);
-  });
-
-  // -------------------------------------------------------------------------
-  // DELETE /dashboard/repos/:repo -- remove repo
-  // -------------------------------------------------------------------------
-
-  it('DELETE /dashboard/repos/:repo removes it from the allowlist', async () => {
-    const cookie = await login();
-
-    // Pre-populate the allowlist.
-    setSetting('repos', JSON.stringify(['octocat/hello-world', 'myorg/myrepo']));
-
-    const csrf = await getAuthCsrf(cookie);
-
-    const res = await server.inject({
-      method: 'DELETE',
-      url: '/dashboard/repos/octocat%2Fhello-world',
+      url: '/settings/repos/octocat/hello-world',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
       payload: `_csrf=${encodeURIComponent(csrf)}`,
     });
 
     expect(res.statusCode).toBe(200);
     expect(store.repos).not.toContain('octocat/hello-world');
-    expect(store.repos).toContain('myorg/myrepo');
   });
 
-  it('remove updates store.repos live (DCFG-05)', async () => {
-    const cookie = await login();
-
-    setSetting('repos', JSON.stringify(['delete-me/repo']));
-    expect(store.repos).toContain('delete-me/repo');
-
-    const csrf = await getAuthCsrf(cookie);
-
-    await server.inject({
-      method: 'DELETE',
-      url: '/dashboard/repos/delete-me%2Frepo',
-      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}`,
-    });
-
-    expect(store.repos).not.toContain('delete-me/repo');
-  });
-
-  // -------------------------------------------------------------------------
-  // Empty allowlist state
-  // -------------------------------------------------------------------------
-
-  it('repos partial renders empty-state copy when allowlist is empty', async () => {
-    const cookie = await login();
-
-    const res = await server.inject({
-      method: 'GET',
-      url: '/settings/repos',
-      headers: { cookie },
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('No repositories configured');
-  });
-
-  // Wave 0 RED: green after Plan 05
-  it('GET /settings/repos renders repos as a .card-repo-grid (ACT-03)', async () => {
+  it('a minSeverity override is saved and readable via store.repoConfig, without changing the global default', async () => {
     const cookie = await login();
     const csrf = await getAuthCsrf(cookie);
 
     await server.inject({
       method: 'POST',
-      url: '/dashboard/repos',
+      url: '/settings/repos/octocat/hello-world',
       headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
-      payload: `_csrf=${encodeURIComponent(csrf)}&repo=myorg%2Fmyrepo`,
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on&minSeverity=critical`,
     });
+
+    expect(store.repoConfig('octocat/hello-world').minSeverity).toBe('critical');
+    expect(store.minSeverity).toBe('medium');
+  });
+
+  it('an ignoreGlobs override is saved and readable via store.repoConfig', async () => {
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    await server.inject({
+      method: 'POST',
+      url: '/settings/repos/octocat/hello-world',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on&${encodeURIComponent('ignoreGlobs')}=${encodeURIComponent('dist/**\nbuild/**')}`,
+    });
+
+    expect(store.repoConfig('octocat/hello-world').ignoreGlobs).toEqual(['dist/**', 'build/**']);
+  });
+
+  it('a blank minSeverity/ignoreGlobs means inherit the global default', async () => {
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    await server.inject({
+      method: 'POST',
+      url: '/settings/repos/octocat/hello-world',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on&minSeverity=&ignoreGlobs=`,
+    });
+
+    const config = store.repoConfig('octocat/hello-world');
+    expect(config.minSeverity).toBe(store.minSeverity);
+    expect(config.ignoreGlobs).toEqual(store.ignoreGlobs);
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /settings/repos and GET /settings/repos/:owner/:repo
+  // -------------------------------------------------------------------------
+
+  it('GET /settings/repos shows the not-connected empty state when no GitHub App is connected', async () => {
+    const cookie = await login();
 
     const res = await server.inject({
       method: 'GET',
@@ -465,6 +426,28 @@ describe('Repositories section (DCFG-03, DCFG-05) -- Plan 03', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toContain('card-repo-grid');
+    expect(res.body).toContain('Connect GitHub first');
+  });
+
+  it('GET /settings/repos/:owner/:repo renders the current enabled state', async () => {
+    const cookie = await login();
+    const csrf = await getAuthCsrf(cookie);
+
+    await server.inject({
+      method: 'POST',
+      url: '/settings/repos/octocat/hello-world',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', cookie },
+      payload: `_csrf=${encodeURIComponent(csrf)}&enabled=on`,
+    });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: '/settings/repos/octocat/hello-world',
+      headers: { cookie },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('octocat/hello-world');
+    expect(res.body).toContain('checked');
   });
 });

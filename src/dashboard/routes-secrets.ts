@@ -13,21 +13,17 @@
  *   - hx-target="#secrets-section" hx-swap="outerHTML"
  *
  * Secret name mapping (form field -> secrets table name):
- *   webhookSecret       -> settings.webhook_secret  (non-secret table, plain setting)
  *   claudeOauthToken    -> secrets.claude_oauth_token
  *   anthropicApiKey     -> secrets.anthropic_api_key
- *   githubAppId         -> secrets.github_app_id
- *   githubAppPrivateKey -> secrets.github_app_private_key
- *   githubToken         -> secrets.github_token
  *
- * Note: webhookSecret is stored in the settings table (not encrypted) because it is
- * compared on every webhook request and encrypting it would add overhead on the hot path.
- * The plan's "write-only preserve" rule still applies: blank submission leaves it unchanged.
+ * GitHub credentials (App ID, private key, PAT, webhook secret) are no longer
+ * enterable here -- the GitHub connect flow (routes-github.ts) is the only
+ * path, and it generates and persists the webhook secret automatically.
  */
 
 import type Database from 'better-sqlite3';
 import type { ConfigStore } from '../config/store.js';
-import { setSetting, setSecretRecord, getSecretRecord, getSetting } from '../state/config-state.js';
+import { setSecretRecord, getSecretRecord, getSetting } from '../state/config-state.js';
 import { encryptSecret, decryptSecret, maskSecret } from '../config/crypto.js';
 import { renderFlash } from './partials.js';
 import { requireLogin } from './auth.js';
@@ -79,7 +75,7 @@ export async function registerSecretsRoutes(
   fastify.get('/settings/secrets', { preHandler: requireLogin }, async (req: Req, reply: Rep) => {
     const csrfToken = await reply.generateCsrf(); // ALWAYS first, both paths (D-07)
     const machineKey = await getMachineKey();
-    const sectionData = { ...buildSecretsViewData(store, machineKey), csrfToken };
+    const sectionData = { ...buildSecretsViewData(machineKey), csrfToken };
 
     const isHtmx = req.headers['hx-request'] === 'true'
       && req.headers['hx-history-restore-request'] !== 'true';
@@ -118,31 +114,18 @@ export async function registerSecretsRoutes(
 
       try {
         // Process each secret field. Write-only: blank = skip (D2-06, T-02-19).
-        // webhookSecret: stored as a plain setting (not in secrets table).
-        const webhookSecret = body['webhookSecret'];
-        if (webhookSecret && webhookSecret.trim() !== '') {
-          setSetting('webhook_secret', webhookSecret.trim());
-        }
-
         // Encrypted secret fields: each is stored with setSecretRecord.
         const secretFields: Array<[string, string]> = [
           ['claudeOauthToken', 'claude_oauth_token'],
           ['anthropicApiKey', 'anthropic_api_key'],
-          ['githubAppId', 'github_app_id'],
-          ['githubAppPrivateKey', 'github_app_private_key'],
-          ['githubToken', 'github_token'],
         ];
 
         // Token fields are whitespace-free by definition (T-jr6-03).
         // Strip ALL internal whitespace on save so a corrupted-on-copy token with
         // stray spaces cannot quietly break auth (reproduces the live 401 incident).
-        // github_app_private_key is a PEM with legitimate newlines and internal spaces
-        // and is explicitly excluded from stripping -- only trim() applies to it.
         const WHITESPACE_FREE_FIELDS = new Set([
           'claudeOauthToken',
           'anthropicApiKey',
-          'githubAppId',
-          'githubToken',
         ]);
 
         for (const [fieldName, secretName] of secretFields) {
@@ -159,7 +142,7 @@ export async function registerSecretsRoutes(
         const csrfToken = await reply.generateCsrf();
         const flash = renderFlash('success', 'Secrets saved.');
         return reply.code(200).viewAsync('dashboard/partials/secrets', {
-          ...buildSecretsViewData(store, machineKey),
+          ...buildSecretsViewData(machineKey),
           csrfToken,
           flash,
         });
@@ -171,7 +154,7 @@ export async function registerSecretsRoutes(
         const csrfToken = await reply.generateCsrf();
         const flash = renderFlash('error', 'Failed to save secrets. Check the logs for details.');
         return reply.code(200).viewAsync('dashboard/partials/secrets', {
-          ...buildSecretsViewData(store, machineKey),
+          ...buildSecretsViewData(machineKey),
           csrfToken,
           flash,
         });
@@ -188,15 +171,7 @@ export async function registerSecretsRoutes(
  *   - The (PEM key set) / (not set) indicators are safe literal strings.
  *   - No decrypted value is placed in any rendered input's value attribute.
  */
-function buildSecretsViewData(store: ConfigStore, machineKey: Buffer): Record<string, unknown> {
-  // Webhook secret is in the settings table (plain text).
-  // WR-02: the webhook HMAC secret is a pure shared secret (not a token whose trailing
-  // digits aid identification), so show a presence indicator rather than leaking its
-  // last 4 characters back to the browser. maskSecret last-4 is reserved for OAuth/API
-  // tokens below, where the trailing chars are a deliberate identification aid.
-  const webhookSecretVal = store.webhookSecret;
-  const webhookSecretPreview = webhookSecretVal ? '(set)' : null;
-
+function buildSecretsViewData(machineKey: Buffer): Record<string, unknown> {
   // Encrypted secrets: decrypt only to produce a masked preview.
   // We use getSecretRecord + decryptSecret directly to avoid mutating store.
   function previewSecret(
@@ -215,19 +190,10 @@ function buildSecretsViewData(store: ConfigStore, machineKey: Buffer): Record<st
 
   const claudeOauthPreview = previewSecret('claude_oauth_token');
   const anthropicApiKeyPreview = previewSecret('anthropic_api_key', 'sk-ant-');
-  const githubAppIdPreview = previewSecret('github_app_id');
-  const githubTokenPreview = previewSecret('github_token', 'ghp_');
-
-  // Private key: show (PEM key set) or (not set) -- never a masked preview.
-  const hasPrivateKey = !!getSecretRecord('github_app_private_key');
 
   return {
-    webhookSecretPreview,
     claudeOauthPreview,
     anthropicApiKeyPreview,
-    githubAppIdPreview,
-    githubTokenPreview,
-    hasPrivateKey,
     flash: '',
   };
 }

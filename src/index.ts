@@ -15,7 +15,8 @@
  * Local full-stack run (manual end-to-end smoke):
  *
  *   OPEN_REVIEW_WEBHOOK_SECRET=<your-secret> \
- *   GITHUB_TOKEN=<your-pat> \
+ *   GITHUB_APP_ID=<your-app-id> \
+ *   GITHUB_APP_PRIVATE_KEY_PATH=/path/to/private.pem \
  *   CLAUDE_CODE_OAUTH_TOKEN=<from-claude-setup-token> \
  *   npm run start:dev
  *
@@ -24,7 +25,7 @@
  */
 
 import { loadMachineKey } from './config/crypto.js';
-import { SqliteConfigStore, seedFromEnvIfEmpty } from './config/sqlite-store.js';
+import { SqliteConfigStore, seedFromEnvIfEmpty, migrateLegacyRepos } from './config/sqlite-store.js';
 import { openDb } from './state/db.js';
 import { pruneOldDeliveries } from './state/deliveries.js';
 import { pruneOldReviews } from './state/reviews.js';
@@ -64,6 +65,10 @@ async function main(): Promise<void> {
 
   // Seed settings + secrets from env on first run (D2-02, idempotent).
   seedFromEnvIfEmpty(db, machineKey);
+
+  // One-way backfill: carry any pre-existing legacy repo allowlist into the
+  // repo_settings table (idempotent -- no-op once repo_settings has a row).
+  migrateLegacyRepos();
 
   // Step 3: Safety gates -- refuse to start if versions are below the minimum.
   // Both checks run BEFORE listen() so no webhook is ever accepted on an unsafe env.

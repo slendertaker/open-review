@@ -1,0 +1,70 @@
+<section id="repo-detail-section" class="section-card">
+  <div class="section-header">
+    <span class="bracket-prefix" style="display:inline-flex;align-items:center;"><%~ include('./icons', { name: 'check' }) %></span>
+    <h2 class="heading-md"><%= it.fullName %></h2>
+  </div>
+
+  <%~ include('./repo-picker', { installGroupsJson: it.installGroupsJson, owner: it.owner, repo: it.repo }) %>
+
+  <form
+    hx-post="/settings/repos/<%= encodeURIComponent(it.owner) %>/<%= encodeURIComponent(it.repo) %>"
+    hx-target="#content"
+    hx-swap="innerHTML"
+    style="max-width: 560px;"
+  >
+    <input type="hidden" name="_csrf" value="<%= it.csrfToken %>">
+
+    <!-- Enabled -->
+    <div class="field-row">
+      <label class="field-toggle-label">
+        <input type="checkbox" class="field-toggle" name="enabled" value="on" <% if (it.enabled) { %>checked<% } %>>
+        <span class="field-toggle-track"></span>
+        <span class="body-md">Enabled</span>
+      </label>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: var(--spacing-1) 0 0 0; padding-left: 20px;">Review new pull requests on this repository.</p>
+    </div>
+
+    <!-- Severity override -->
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <label for="minSeverity" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Minimum severity</label>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-1) 0;">Overrides the global default for this repository only.</p>
+      <select id="minSeverity" name="minSeverity" class="text-input" style="width: 100%; max-width: 280px;">
+        <option value=""<% if (!it.minSeverity) { %> selected<% } %>>Inherit (global: <%= it.globalMinSeverity %>)</option>
+        <option value="low"<% if (it.minSeverity === 'low') { %> selected<% } %>>low</option>
+        <option value="medium"<% if (it.minSeverity === 'medium') { %> selected<% } %>>medium</option>
+        <option value="high"<% if (it.minSeverity === 'high') { %> selected<% } %>>high</option>
+        <option value="critical"<% if (it.minSeverity === 'critical') { %> selected<% } %>>critical</option>
+      </select>
+    </div>
+
+    <!-- Ignore globs override -->
+    <div class="field-row" style="margin-top: var(--spacing-3);">
+      <label for="ignoreGlobs" class="body-md" style="display: block; margin-bottom: var(--spacing-1);">Ignore path patterns</label>
+      <p class="caption-md" style="color: var(--color-text-muted); margin: 0 0 var(--spacing-1) 0;">One glob per line. Leave blank to inherit the global list.</p>
+      <textarea
+        id="ignoreGlobs"
+        name="ignoreGlobs"
+        class="text-input"
+        rows="4"
+        style="width: 100%; resize: vertical;"
+      ><%= it.ignoreGlobs %></textarea>
+    </div>
+
+    <!-- Save button + back link + flash region -->
+    <div style="margin-top: var(--spacing-3); display: flex; align-items: center; gap: var(--spacing-3);">
+      <button type="submit" class="btn btn-secondary">Save</button>
+      <a
+        href="/settings/repos"
+        hx-get="/settings/repos"
+        hx-target="#content"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        class="btn btn-ghost"
+      >Back to Repositories</a>
+    </div>
+
+    <% if (it.flash) { %>
+    <%~ it.flash %>
+    <% } %>
+  </form>
+</section>

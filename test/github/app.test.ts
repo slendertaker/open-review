@@ -1,12 +1,9 @@
 /**
- * GitHub App + PAT auth tests (POST-06)
+ * GitHub App auth tests (POST-06)
  *
- * Asserts installationOctokit uses the auth-app strategy and patOctokit uses
- * token auth. Also verifies installationToken mints a token string.
- * No live network calls -- assertions are on constructed config/shape.
- *
- * App mode takes precedence when appId + privateKey + installationId are present;
- * PAT mode is the fallback (D-16).
+ * Asserts installationOctokit uses the auth-app strategy. Also verifies
+ * installationToken mints a token string. No live network calls --
+ * assertions are on constructed config/shape.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -54,26 +51,6 @@ describe('installationOctokit (POST-06 -- App mode auth-app strategy)', () => {
   });
 });
 
-describe('patOctokit (POST-06 -- PAT fallback)', () => {
-  it('returns an Octokit-like object configured with a token', async () => {
-    const { patOctokit } = await import('../../src/github/app.js');
-    const client = patOctokit('ghp_test_token_abc123');
-    expect(client).toHaveProperty('rest');
-    expect(client.rest).toHaveProperty('pulls');
-  });
-
-  it('does not use createAppAuth in PAT mode', async () => {
-    const createAppAuthSpy = vi.mocked(createAppAuth);
-    createAppAuthSpy.mockClear();
-
-    const { patOctokit } = await import('../../src/github/app.js');
-    patOctokit('ghp_test_token_xyz');
-
-    // PAT mode must NOT invoke createAppAuth -- it uses a static token.
-    expect(createAppAuthSpy).not.toHaveBeenCalled();
-  });
-});
-
 describe('installationToken (POST-06 -- token string for clone URL)', () => {
   it('returns a string token (mocked auth flow)', async () => {
     // We mock createAppAuth so that no real RSA key or network call is needed.
@@ -95,25 +72,10 @@ describe('installationToken (POST-06 -- token string for clone URL)', () => {
   });
 });
 
-describe('App mode vs PAT mode precedence (D-16)', () => {
-  it('App mode exports exist and are distinct from PAT mode exports', async () => {
+describe('App mode exports (D-16)', () => {
+  it('App mode exports exist', async () => {
     const mod = await import('../../src/github/app.js');
-    // All three must be exported
     expect(typeof mod.installationOctokit).toBe('function');
     expect(typeof mod.installationToken).toBe('function');
-    expect(typeof mod.patOctokit).toBe('function');
-  });
-
-  it('installationOctokit and patOctokit return different client configurations', async () => {
-    const { installationOctokit, patOctokit } = await import('../../src/github/app.js');
-    const appClient = installationOctokit({ appId: 'a', privateKey: 'pk' }, 1);
-    const patClient = patOctokit('ghp_token');
-
-    // Both have .rest -- the Auth strategy difference is implementation-level;
-    // the observable difference is that App mode accepts App credentials while
-    // PAT mode accepts a token string. Verifying both produce a valid client
-    // with the .rest interface confirms they are independent paths.
-    expect(appClient).toHaveProperty('rest');
-    expect(patClient).toHaveProperty('rest');
   });
 });

@@ -1,11 +1,7 @@
 /**
  * GitHub auth helpers (D-16).
  *
- * App mode (primary): mint short-lived installation tokens via @octokit/auth-app.
- * PAT mode (fallback): simple GITHUB_TOKEN static auth.
- *
- * Phase 1 ships PAT mode only for the skeleton; App mode is available for callers
- * that supply appId + privateKey + installationId (plan 05 completes App wiring).
+ * App mode (only path): mint short-lived installation tokens via @octokit/auth-app.
  */
 
 import { Octokit } from '@octokit/rest';
@@ -59,13 +55,6 @@ export function appLevelOctokit(creds: AppCredentials): Octokit {
       privateKey: creds.privateKey,
     },
   });
-}
-
-/**
- * Build a PAT-authenticated Octokit client (single-repo fallback).
- */
-export function patOctokit(token: string): Octokit {
-  return new Octokit({ auth: token });
 }
 
 /**

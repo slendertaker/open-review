@@ -548,13 +548,12 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     return cookieHeader(loginRes);
   }
 
-  it('GET /dashboard/github renders both user and org account sections (D5-05)', async () => {
-    // RED: /dashboard/github does not exist -- after Plan 03/04 this becomes 200
+  it('GET /settings/repos renders both user and org account sections (D5-05)', async () => {
     const cookie = await login();
 
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard/github',
+      url: '/settings/repos',
       headers: { cookie },
     });
 
@@ -564,13 +563,12 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     expect(res.body).toContain('myorg');
   });
 
-  it('GET /dashboard/github labels the organization group as an organization (D5-05)', async () => {
-    // RED: /dashboard/github does not exist
+  it('GET /settings/repos labels the organization group as an organization (D5-05)', async () => {
     const cookie = await login();
 
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard/github',
+      url: '/settings/repos',
       headers: { cookie },
     });
 
@@ -579,13 +577,12 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     expect(res.body.toLowerCase()).toContain('organization');
   });
 
-  it('GET /dashboard/github renders repo rows for each account (D5-05)', async () => {
-    // RED: /dashboard/github does not exist
+  it('GET /settings/repos renders repo rows for each account (D5-05)', async () => {
     const cookie = await login();
 
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard/github',
+      url: '/settings/repos',
       headers: { cookie },
     });
 
@@ -597,10 +594,10 @@ describe('github installations grouped by account (SC-3, D5-05)', () => {
     expect(res.body).toContain('myorg/repo-c');
   });
 
-  it('GET /dashboard/github requires authentication (D5-06)', async () => {
+  it('GET /settings/repos requires authentication (D5-06)', async () => {
     const res = await server.inject({
       method: 'GET',
-      url: '/dashboard/github',
+      url: '/settings/repos',
     });
 
     // Unauthenticated -- must redirect to login

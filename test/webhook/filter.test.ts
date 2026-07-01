@@ -14,7 +14,6 @@ interface FilterConfig {
   repos: string[];
   skipDrafts: boolean;
   skipForks: boolean;
-  appConnected: boolean; // Phase 5 (D5-07): true when github_app_slug setting is present
 }
 
 /** Build a synthetic PullRequestEvent payload for testing */
@@ -50,11 +49,13 @@ function makePayload(options: {
   };
 }
 
+// Strict opt-in (D5-07): the repo allowlist is authoritative, so the default
+// config here includes the payload's default repo ('owner/repo') to keep the
+// action/draft/fork tests below focused on their own dimension.
 const DEFAULT_CONFIG: FilterConfig = {
-  repos: [],
+  repos: ['owner/repo'],
   skipDrafts: true,
   skipForks: true,
-  appConnected: false, // Phase 5 (D5-07): false = manual/env mode, preserving empty=allow-all
 };
 
 describe('shouldProcess (INTK-02, INTK-03)', () => {
@@ -113,14 +114,15 @@ describe('shouldProcess (INTK-02, INTK-03)', () => {
       expect(result.process).toBe(true);
     });
 
-    it('passes any repo when allowlist is empty (App-installation boundary)', () => {
+    it('blocks any repo when allowlist is empty (strict opt-in, D5-07)', () => {
       const config = { ...DEFAULT_CONFIG, repos: [] };
       const result = shouldProcess(
         'pull_request',
         makePayload({ repoFullName: 'any/repo' }),
         config,
       );
-      expect(result.process).toBe(true);
+      expect(result.process).toBe(false);
+      expect(result.reason).toContain('opt-in');
     });
   });
 
@@ -189,44 +191,28 @@ describe('shouldProcess (INTK-02, INTK-03)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase 5: appConnected opt-in semantics (D5-07)
-// These tests will FAIL RED until Plan 02 adds appConnected to shouldProcess.
+// Strict opt-in semantics (D5-07): the GitHub App is the only auth path, so
+// the repo allowlist is always authoritative -- empty list means "review
+// nothing" until a repo is explicitly enabled.
 // ---------------------------------------------------------------------------
 
-/**
- * D5-07: When appConnected=true (github_app_slug setting present), the repo list
- * becomes authoritative: empty list means "review nothing" (strict opt-in).
- * When appConnected=false (manual/env mode), the existing empty=allow-all behavior
- * is preserved -- this must NEVER regress.
- */
-describe('appConnected opt-in semantics (D5-07)', () => {
-  it('blocks all repos when appConnected=true and repos list is empty', () => {
-    // RED: shouldProcess ignores appConnected today; this case currently passes
-    // After Plan 02: appConnected=true + empty repos -> block with opt-in reason
-    const config: FilterConfig = { ...DEFAULT_CONFIG, appConnected: true, repos: [] };
+describe('strict opt-in semantics (D5-07)', () => {
+  it('blocks all repos when repos list is empty', () => {
+    const config: FilterConfig = { ...DEFAULT_CONFIG, repos: [] };
     const result = shouldProcess('pull_request', makePayload({ repoFullName: 'any/repo' }), config);
     expect(result.process).toBe(false);
     expect(result.reason).toContain('opt-in');
   });
 
-  it('passes a repo that is in the allowlist when appConnected=true', () => {
-    // After Plan 02: appConnected=true + matching repo -> allow
-    const config: FilterConfig = { ...DEFAULT_CONFIG, appConnected: true, repos: ['owner/repo'] };
+  it('passes a repo that is in the allowlist', () => {
+    const config: FilterConfig = { ...DEFAULT_CONFIG, repos: ['owner/repo'] };
     const result = shouldProcess('pull_request', makePayload({ repoFullName: 'owner/repo' }), config);
     expect(result.process).toBe(true);
   });
 
-  it('blocks a repo not in the allowlist when appConnected=true', () => {
-    // After Plan 02: appConnected=true + non-matching repo -> block
-    const config: FilterConfig = { ...DEFAULT_CONFIG, appConnected: true, repos: ['owner/other'] };
+  it('blocks a repo not in the allowlist', () => {
+    const config: FilterConfig = { ...DEFAULT_CONFIG, repos: ['owner/other'] };
     const result = shouldProcess('pull_request', makePayload({ repoFullName: 'owner/repo' }), config);
     expect(result.process).toBe(false);
-  });
-
-  it('preserves empty=allow-all behavior when appConnected=false (manual mode)', () => {
-    // This must ALWAYS pass (manual-mode regression guard, SC-5 / D5-07)
-    const config: FilterConfig = { ...DEFAULT_CONFIG, appConnected: false, repos: [] };
-    const result = shouldProcess('pull_request', makePayload({ repoFullName: 'any/repo' }), config);
-    expect(result.process).toBe(true);
   });
 });

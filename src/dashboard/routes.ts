@@ -12,7 +12,7 @@
 
 import { requireLogin, loginHandler, logoutHandler } from './auth.js';
 import { registerGeneralRoutes } from './routes-general.js';
-import { registerReposRoutes } from './routes-repos.js';
+import { registerRepoSettingsRoutes } from './routes-repo-settings.js';
 import { registerProviderRoutes } from './routes-provider.js';
 import { registerSecretsRoutes } from './routes-secrets.js';
 import { registerAccessRoutes } from './routes-access.js';
@@ -123,7 +123,7 @@ export async function registerDashboardRoutes(
   // Per-section route registrars (Wave 3 plans fill in the bodies)
   // -------------------------------------------------------------------------
   await registerGeneralRoutes(fastify, store, db);
-  await registerReposRoutes(fastify, store, db);
+  await registerRepoSettingsRoutes(fastify, store, db);
   await registerProviderRoutes(fastify, store, db);
   await registerSecretsRoutes(fastify, store, db);
   await registerAccessRoutes(fastify, store, db);

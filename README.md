@@ -17,8 +17,8 @@ review at near-zero marginal cost on their own infrastructure.
 ## Requirements
 
 - A 1-core / 2 GB Debian or Ubuntu VPS (the target operating envelope)
-- A GitHub account -- App mode is primary (bot identity, per-installation
-  tokens); a Personal Access Token is the single-repo fallback
+- A GitHub account to install a GitHub App on (the dashboard creates the App
+  for you via GitHub's manifest flow -- no manual credential entry)
 - An Anthropic credential: a Claude OAuth token
   (`CLAUDE_CODE_OAUTH_TOKEN`) or an API key (`ANTHROPIC_API_KEY`)
 
@@ -65,7 +65,6 @@ export CLAUDE_CODE_OAUTH_TOKEN="<your-claude-token>"
 # -- or -- export ANTHROPIC_API_KEY="sk-ant-..."
 export GITHUB_APP_ID="<app-id>"
 export GITHUB_APP_PRIVATE_KEY_PATH="/path/to/private.pem"
-# PAT fallback: export GITHUB_TOKEN="ghp_..."
 export OPEN_REVIEW_REPOS="owner/repo1,owner/repo2"   # empty = all installed repos
 export OPEN_REVIEW_DOMAIN="review.example.com"        # omit for IP-only HTTP mode
 
@@ -79,7 +78,6 @@ Accepted credential variables (all optional for unattended passthrough):
 | `OPEN_REVIEW_WEBHOOK_SECRET` | HMAC secret for GitHub webhook -- auto-generated if absent |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Claude subscription OAuth token (primary auth) |
 | `ANTHROPIC_API_KEY` | Anthropic API key (secondary auth) |
-| `GITHUB_TOKEN` | GitHub Personal Access Token (PAT mode) |
 | `GITHUB_APP_ID` | GitHub App ID (App mode) |
 | `GITHUB_APP_PRIVATE_KEY_PATH` | Path to the GitHub App private key PEM file |
 | `OPEN_REVIEW_REPOS` | Comma-separated list of `owner/repo` pairs to review |
@@ -108,19 +106,22 @@ journalctl -u open-review -n 50 | grep 'FIRST RUN'
 
 ### GitHub App setup
 
-App mode gives Open Review a bot identity and per-installation tokens. To
-create a GitHub App:
+The dashboard's "Connect GitHub" button is the recommended way to set this
+up -- it creates the App for you via GitHub's manifest flow and configures
+the webhook secret automatically. No manual credential entry is needed.
+
+For unattended deploys that want to pre-provision the App via environment
+variables instead of the dashboard, create it manually:
 
 1. Go to GitHub Settings > Developer settings > GitHub Apps > New GitHub App
 2. Set the webhook URL to `https://<your-domain>/webhook` (or
    `http://<vps-ip>/webhook` for IP mode)
-3. Paste the webhook secret from the installer output
+3. Generate a webhook secret and set it as `OPEN_REVIEW_WEBHOOK_SECRET`
 4. Grant permissions: Pull requests (read/write), Contents (read)
 5. Subscribe to the `pull_request` event
 6. Generate and download a private key
 7. Install the App on the target repositories
-8. Supply `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY_PATH` (unattended) or
-   enter them in the dashboard (guided)
+8. Supply `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY_PATH` as env vars
 
 ---
 

@@ -8,7 +8,6 @@
  *   Webhook secret: OPEN_REVIEW_WEBHOOK_SECRET, WEBHOOK_SECRET
  *   Claude OAuth:   CLAUDE_CODE_OAUTH_TOKEN
  *   Anthropic key:  ANTHROPIC_API_KEY
- *   GitHub PAT:     GITHUB_TOKEN
  *   GitHub App:     GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_PRIVATE_KEY_PATH
  *   Repo allowlist: OPEN_REVIEW_REPOS (comma-separated)
  *   Min severity:   OPEN_REVIEW_MIN_SEVERITY (low|medium|high|critical)
@@ -59,14 +58,14 @@ export interface ConfigStore {
   readonly claudeOauthToken: string | undefined;
   /** Anthropic API key (fallback auth). */
   readonly anthropicApiKey: string | undefined;
-  /** GitHub PAT for posting reviews (single-repo fallback). */
-  readonly githubToken: string | undefined;
   /** GitHub App ID (App mode). */
   readonly githubAppId: string | undefined;
   /** GitHub App private key PEM (App mode). */
   readonly githubAppPrivateKey: string | undefined;
   /** Repo allowlist; empty = allow all repos the App is installed on. */
   readonly repos: string[];
+  /** Effective per-repo severity/ignore-globs, merging any override with the global default. */
+  repoConfig(fullName: string): { minSeverity: MinSeverity; ignoreGlobs: string[] };
   /** Minimum finding severity to post. */
   readonly minSeverity: MinSeverity;
   /** Skip draft PRs. */
@@ -131,7 +130,6 @@ export class EnvConfigStore implements ConfigStore {
   readonly webhookSecret: string;
   readonly claudeOauthToken: string | undefined;
   readonly anthropicApiKey: string | undefined;
-  readonly githubToken: string | undefined;
   readonly githubAppId: string | undefined;
   readonly githubAppPrivateKey: string | undefined;
   readonly repos: string[];
@@ -160,7 +158,6 @@ export class EnvConfigStore implements ConfigStore {
 
     this.claudeOauthToken = readEnv('CLAUDE_CODE_OAUTH_TOKEN');
     this.anthropicApiKey = readEnv('ANTHROPIC_API_KEY');
-    this.githubToken = readEnv('GITHUB_TOKEN');
     this.githubAppId = readEnv('GITHUB_APP_ID');
 
     // GitHub App private key: inline PEM (env) or file path.
@@ -198,5 +195,10 @@ export class EnvConfigStore implements ConfigStore {
     this.provider = readEnv('OPEN_REVIEW_PROVIDER') ?? 'claude';
     this.domain = readEnv('OPEN_REVIEW_DOMAIN');
     this.sessionSecret = readEnv('OPEN_REVIEW_SESSION_SECRET') ?? '';
+  }
+
+  /** Env-only mode has no per-repo override store; always returns the global defaults. */
+  repoConfig(_fullName: string): { minSeverity: MinSeverity; ignoreGlobs: string[] } {
+    return { minSeverity: this.minSeverity, ignoreGlobs: this.ignoreGlobs };
   }
 }

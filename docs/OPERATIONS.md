@@ -86,7 +86,6 @@ accepted variable names and their defaults are:
 | `OPEN_REVIEW_LOG_LEVEL` | `info` | Pino log level (`trace`, `debug`, `info`, `warn`, `error`) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | unset | Claude subscription OAuth token (primary auth) |
 | `ANTHROPIC_API_KEY` | unset | Anthropic API key (secondary auth) |
-| `GITHUB_TOKEN` | unset | GitHub Personal Access Token (PAT mode) |
 | `GITHUB_APP_ID` | unset | GitHub App ID (App mode) |
 | `GITHUB_APP_PRIVATE_KEY_PATH` | unset | Path to GitHub App private key PEM |
 | `OPEN_REVIEW_REPOS` | unset | Comma-separated `owner/repo` allowlist (empty = all) |

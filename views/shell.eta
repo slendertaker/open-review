@@ -75,8 +75,8 @@
           hx-swap="innerHTML"
           hx-push-url="true"
           class="nav-item<%= it.activeSection === 'repos' ? ' nav-item--active' : '' %>"
-          :class="{ 'nav-item--active': activePath === '/settings/repos' }"
-        >Repos</a>
+          :class="{ 'nav-item--active': activePath.startsWith('/settings/repos') }"
+        >Repositories</a>
         <a
           href="/settings/access"
           hx-get="/settings/access"
